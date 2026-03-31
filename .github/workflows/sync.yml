@@ -1,0 +1,29 @@
+name: Sync Airtable → Supabase
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # every hour on the hour
+  workflow_dispatch:       # allow manual trigger from the Actions tab
+
+jobs:
+  sync:
+    name: Sync Orders + Lines
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run sync
+        run: node sync.js
+        env:
+          AIRTABLE_TOKEN:       ${{ secrets.AIRTABLE_TOKEN }}
+          AIRTABLE_BASE:        ${{ secrets.AIRTABLE_BASE }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}

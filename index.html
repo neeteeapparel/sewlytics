@@ -1,0 +1,1799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#00e5a0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sewlytics">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="Sewlytics">
+<title>Sewlytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f3f4f6; --s1:#ffffff; --s2:#f9fafb; --s3:#f3f4f6;
+  --bdr:#e5e7eb; --text:#111827; --t2:#6b7280; --t3:#9ca3af;
+  --grn:#16a34a; --grn-d:rgba(22,163,74,0.1);
+  --org:#d97706; --org-d:rgba(217,119,6,0.1);
+  --red:#dc2626; --red-d:rgba(220,38,38,0.1);
+  --blu:#2563eb; --blu-d:rgba(37,99,235,0.1);
+  --pur:#7c3aed; --pur-d:rgba(124,58,237,0.1);
+  --yel:#ca8a04; --yel-d:rgba(202,138,4,0.1);
+  --teal:#0f766e; --teal-d:rgba(15,118,110,0.1);
+  --r:12px; --rs:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Rajdhani','Noto Sans Devanagari',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:16px;overflow-x:hidden} ::selection{background:rgba(15,118,110,0.2)}
+
+/* ── LOADING ── */
+#loading{position:fixed;inset:0;background:#f0fdfa;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999}
+#loading.hidden{display:none}
+.spin{width:36px;height:36px;border:3px solid #ccfbf1;border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:14px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-txt{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--t2)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--s2);border:1px solid var(--bdr);border-radius:40px;padding:12px 24px;font-size:15px;font-weight:600;z-index:1000;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.pass{border-color:var(--grn);color:var(--grn);background:#f0fdf4}
+.toast.alter{border-color:var(--org);color:var(--org);background:#fffbeb}
+.toast.reject{border-color:var(--red);color:var(--red);background:#fef2f2}
+
+/* ── LOGIN ── */
+#login-screen{min-height:100vh;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#f0fdfa 0%,#f3f4f6 100%)}
+.logo-brand{font-size:44px;font-weight:700;letter-spacing:2px;color:var(--teal);font-weight:800;text-align:center}
+.logo-tag{font-size:12px;color:var(--t2);letter-spacing:3px;text-transform:uppercase;text-align:center;margin-top:4px;margin-bottom:40px}
+.login-card{width:100%;max-width:380px;background:var(--s1);border:1px solid var(--bdr);border-radius:20px;padding:28px;box-shadow:0 4px 24px rgba(0,0,0,0.08)}
+.login-card h2{font-size:18px;color:var(--t2);margin-bottom:20px;letter-spacing:1px;text-transform:uppercase}
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);margin-bottom:6px}
+.fld input{width:100%;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);color:var(--text);font-family:inherit;font-size:16px;padding:12px 14px;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.fld input:focus{border-color:var(--grn)}
+.btn-login{width:100%;margin-top:6px;background:var(--teal);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:18px;font-weight:700;letter-spacing:2px;padding:15px;cursor:pointer;text-transform:uppercase;transition:opacity .2s,transform .1s}
+.btn-login:active{transform:scale(.98);opacity:.85}
+.err-msg{background:var(--red-d);border:1px solid var(--red);border-radius:var(--rs);color:var(--red);font-size:14px;padding:10px 14px;margin-top:10px;text-align:center;display:none}
+
+/* ── APP SHELL ── */
+#app{display:none;flex-direction:column;min-height:100vh}
+
+/* ── HEADER ── */
+.hdr{background:#fff;border-bottom:1px solid var(--bdr);box-shadow:0 1px 4px rgba(0,0,0,0.06);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.hdr-brand{font-size:20px;font-weight:700;letter-spacing:1px;color:var(--teal);font-weight:800}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.lang-tog{background:var(--s2);border:1px solid var(--bdr);border-radius:20px;padding:3px;display:flex;gap:2px}
+.lang-btn{background:none;border:none;color:var(--t2);font-family:inherit;font-size:12px;font-weight:600;letter-spacing:1px;padding:4px 10px;border-radius:16px;cursor:pointer;transition:all .2s}
+.lang-btn.active{background:var(--teal);color:#fff}
+.btn-sm{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);color:var(--t2);font-family:inherit;font-size:12px;font-weight:600;letter-spacing:1px;padding:6px 12px;cursor:pointer;transition:all .2s}
+.btn-sm:hover{border-color:var(--red);color:var(--red)}
+.save-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);animation:pulse 1s infinite;display:none}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+
+/* ── INFO BAR ── */
+.info-bar{background:#f0fdfa;border-bottom:1px solid #ccfbf1;padding:7px 16px;display:flex;align-items:center;gap:14px;font-size:13px;color:var(--t2);flex-wrap:wrap}
+.info-bar .v{color:var(--text);font-weight:600}
+#live-time{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--teal);letter-spacing:.5px;margin-left:auto;font-weight:600}
+
+/* ── MAIN ── */
+.main{flex:1;padding:14px;max-width:600px;margin:0 auto;width:100%}
+
+/* ── CARD ── */
+.card{background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.card-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:10px;font-weight:600}
+
+/* ── SEARCH SELECT ── */
+.srch-wrap{position:relative}
+.srch-wrap input[type=text]{width:100%;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);color:var(--text);font-family:inherit;font-size:15px;font-weight:600;padding:12px 14px;outline:none;transition:border-color .2s}
+.srch-wrap input[type=text]:focus{border-color:var(--grn)}
+.srch-wrap input.has-val{color:var(--grn)}
+.s-drop{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--s2);border:1px solid var(--grn);border-radius:var(--rs);max-height:240px;overflow-y:auto;z-index:150;display:none;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.s-drop.open{display:block}
+.d-item{padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--bdr);transition:background .15s}
+.d-item:last-child{border-bottom:none}
+.d-item:hover,.d-item.hi{background:var(--grn-d)}
+.d-item .dm{font-weight:700;font-size:14px;color:var(--text)}
+.d-item .dm mark{background:rgba(0,229,160,.3);color:var(--grn);border-radius:2px;padding:0 1px}
+.d-item .ds{font-size:12px;color:var(--t2);margin-top:2px}
+.d-empty{padding:14px;color:var(--t2);font-size:14px;text-align:center}
+
+/* ── LINE SELECT ── */
+.sel-lbl{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2);margin-bottom:6px;font-weight:600}
+.sel-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+.sel-wrap{position:relative}
+.sel-wrap select{width:100%;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);color:var(--text);font-family:inherit;font-size:15px;font-weight:600;padding:11px 34px 11px 13px;outline:none;-webkit-appearance:none;cursor:pointer;transition:border-color .2s}
+.sel-wrap select:focus{border-color:var(--grn)}
+.sel-wrap::after{content:'▾';position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--t2);pointer-events:none;font-size:13px}
+.dhu-pill{background:#fffbeb;border:1px solid var(--org);border-radius:var(--rs);padding:11px 14px;font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--org);white-space:nowrap;text-align:center;min-width:80px}
+
+/* ── MAIN STATS (big 3 + DHU) ── */
+.big-stats{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.big-box{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);padding:12px 6px;text-align:center}
+.big-box .bv{font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1}
+.big-box .bl{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);margin-top:4px}
+.big-box.pass .bv{color:var(--grn)}
+.big-box.alter .bv{color:var(--org)}
+.big-box.reject .bv{color:var(--red)}
+.big-box.dhu{border-color:var(--org);background:#fffbeb}
+.at-val{font-size:11px;color:var(--t2);margin-top:2px;font-family:'JetBrains Mono',monospace}
+.big-box.dhu .bv{color:var(--org);font-size:22px}
+
+/* ── INFO STRIP ── */
+.info-strip{display:flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);padding:9px 12px;margin-bottom:12px;flex-wrap:wrap}
+.i-chip{font-size:12px;color:var(--t2);padding:3px 0}
+.i-chip .iv{color:var(--text);font-weight:600;font-family:'JetBrains Mono',monospace}
+.i-chip .iv.blu{color:var(--blu)}
+.i-sep{color:var(--bdr);font-size:14px}
+.btn-more{margin-left:auto;background:none;border:1px solid var(--bdr);border-radius:6px;color:var(--t2);font-family:inherit;font-size:12px;padding:4px 10px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-more:hover{border-color:var(--grn);color:var(--grn)}
+
+/* ── EXPANDED DETAIL ── */
+.detail-panel{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);padding:12px;margin-bottom:12px;display:none}
+.detail-panel.open{display:block}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
+.det-box{background:var(--s1);border:1px solid var(--bdr);border-radius:var(--rs);padding:10px 6px;text-align:center}
+.det-box .dv{font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.det-box .dl{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--t2);margin-top:3px}
+.det-box.repass .dv{color:var(--grn)}
+.det-box.rereject .dv{color:var(--red)}
+.det-box.tpass .dv{color:var(--grn)}
+.det-box.tpass{border-color:var(--grn);background:var(--grn-d)}
+.det-box.treject .dv{color:var(--red)}
+.det-box.treject{border-color:var(--red);background:var(--red-d)}
+.today-row{margin-top:8px;padding:8px 10px;background:var(--s1);border:1px solid var(--bdr);border-radius:var(--rs);display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.today-row .tl{color:var(--t2)}
+.today-row .tv{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--grn)}
+
+/* ── BANNER ── */
+.banner{display:none;background:var(--yel-d);border:1px solid var(--yel);border-radius:var(--rs);padding:11px 14px;margin-bottom:12px;color:var(--yel);font-size:13px;font-weight:600;text-align:center}
+
+/* ── PIECE COUNTER ── */
+.pcs-row{display:flex;align-items:center;justify-content:space-between;background:var(--s1);border:1px solid var(--bdr);border-radius:var(--r);padding:14px 16px;margin-bottom:12px}
+.pcs-lbl{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--t2)}
+.ctr{display:flex;align-items:center;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);overflow:hidden}
+.ctr-btn{background:none;border:none;color:var(--text);font-size:22px;font-weight:700;width:46px;height:46px;cursor:pointer;transition:background .15s;font-family:monospace}
+.ctr-btn:active{background:var(--s3)}
+.ctr-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;width:52px;text-align:center;border-left:1px solid var(--bdr);border-right:1px solid var(--bdr);padding:10px 0}
+
+/* ── ACTION BUTTONS ── */
+.act-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+.act-btn{border:2px solid;border-radius:var(--r);padding:18px 6px;font-family:inherit;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:transform .1s,opacity .2s;display:flex;flex-direction:column;align-items:center;gap:5px}
+.act-btn .bi{font-size:26px}
+.act-btn:active{transform:scale(.96)}
+.act-btn:disabled{opacity:.3;cursor:not-allowed;transform:none}
+.act-btn.pass{background:#f0fdf4;border-color:var(--grn);color:#14532d}
+.act-btn.alter{background:#fffbeb;border-color:var(--org);color:#78350f}
+.act-btn.reject{background:#fef2f2;border-color:var(--red);color:#7f1d1d}
+
+/* ── ALTER STRIP ── */
+.alt-strip{background:#fffbeb;border:1px solid var(--org);border-radius:var(--r);padding:13px 16px;display:none;align-items:center;justify-content:space-between;cursor:pointer;transition:background .2s;margin-bottom:12px}
+.alt-strip:active{background:#fef3c7}
+.alt-info{font-size:14px;color:var(--org);font-weight:600}
+.alt-sub{font-size:11px;color:var(--org);opacity:.7;letter-spacing:1px;text-transform:uppercase}
+.alt-ct{font-size:32px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--org)}
+
+/* ── SHEETS ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;backdrop-filter:blur(4px)}
+.overlay.open{display:block}
+.sheet{position:fixed;bottom:0;left:0;right:0;background:#fff;box-shadow:0 -4px 24px rgba(0,0,0,0.1);border-top:1px solid var(--bdr);border-radius:20px 20px 0 0;z-index:201;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);max-height:88vh;display:flex;flex-direction:column}
+.sheet.open{transform:translateY(0)}
+.sh-handle{width:40px;height:4px;background:var(--bdr);border-radius:2px;margin:12px auto 0;flex-shrink:0}
+.sh-hdr{padding:14px 18px 12px;border-bottom:1px solid var(--bdr);flex-shrink:0;display:flex;justify-content:space-between;align-items:flex-start}
+.sh-title{font-size:18px;font-weight:700}
+.sh-sub{font-size:13px;color:var(--t2);margin-top:3px}
+.btn-back{background:var(--org-d);border:1.5px solid var(--org);border-radius:var(--rs);color:var(--org);font-family:inherit;font-size:13px;font-weight:700;padding:7px 14px;cursor:pointer;letter-spacing:.5px}
+.sh-body{flex:1;overflow-y:auto;padding:12px 16px;-webkit-overflow-scrolling:touch}
+.sh-foot{padding:14px 16px;border-top:1px solid var(--bdr);flex-shrink:0}
+
+/* ── DEFECT LIST ── */
+.def-search{position:relative;margin-bottom:10px}
+.def-search input{width:100%;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);color:var(--text);font-family:inherit;font-size:15px;padding:11px 16px 11px 38px;outline:none}
+.def-search input:focus{border-color:var(--grn)}
+.def-search .si{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--t2);font-size:15px}
+.def-cat{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);padding:10px 4px 5px;font-weight:600}
+.def-item{display:flex;align-items:center;gap:11px;padding:12px 13px;border-radius:var(--rs);margin-bottom:3px;cursor:pointer;transition:background .15s;border:1px solid transparent}
+.def-item:active,.def-item.sel{background:#f0fdf4;border-color:var(--grn);border-left:3px solid var(--grn)}
+.def-dot{width:22px;height:22px;border-radius:50%;background:var(--s3);border:2px solid var(--bdr);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:transparent;transition:all .15s}
+.def-item.sel .def-dot{background:var(--grn);border-color:var(--grn);color:#fff}
+.def-name{font-size:15px;font-weight:700;color:var(--text)}
+.def-hi{font-size:13px;font-weight:600;color:var(--teal);margin-top:2px;font-family:'Noto Sans Devanagari',sans-serif}
+.add-def-btn{display:flex;align-items:center;gap:10px;padding:12px 13px;border-radius:var(--rs);cursor:pointer;color:var(--grn);font-size:14px;font-weight:600;transition:background .15s;margin-top:4px}
+.add-def-btn:active{background:var(--grn-d)}
+.add-form{padding:6px 0}
+.add-form input,.add-form select{width:100%;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);color:var(--text);font-family:inherit;font-size:15px;padding:11px 13px;outline:none;margin-bottom:8px;-webkit-appearance:none;transition:border-color .2s}
+.add-form input:focus,.add-form select:focus{border-color:var(--grn)}
+.btn-confirm{width:100%;background:var(--teal);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:17px;font-weight:700;letter-spacing:1.5px;padding:15px;cursor:pointer;text-transform:uppercase;transition:opacity .2s,transform .1s}
+.btn-confirm:active{transform:scale(.98)}
+.btn-confirm:disabled{opacity:.35;cursor:not-allowed;transform:none}
+
+/* ── ALTER QUEUE ITEMS ── */
+.q-item{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.q-style{font-size:15px;font-weight:700;margin-bottom:3px}
+.q-meta{font-size:12px;color:var(--t2);margin-bottom:8px}
+.q-defect{font-size:13px;color:var(--org);padding:5px 10px;background:var(--org-d);border-radius:6px;display:inline-block;margin-bottom:10px}
+.q-acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.qp,.qr{border:none;border-radius:var(--rs);font-family:inherit;font-size:14px;font-weight:700;padding:11px;cursor:pointer;transition:transform .1s;letter-spacing:.5px}
+.qp{background:var(--grn-d);border:1.5px solid var(--grn);color:var(--grn)}
+.qr{background:var(--red-d);border:1.5px solid var(--red);color:var(--red)}
+.qp:active,.qr:active{transform:scale(.96)}
+.empty-st{text-align:center;padding:36px 20px;color:var(--t2);font-size:15px}
+.empty-st .ei{font-size:36px;margin-bottom:10px}
+
+/* ═══════════════════════════════════
+   MANAGER / DHU REPORT
+═══════════════════════════════════ */
+#mgr-app{display:none;flex-direction:column;min-height:100vh}
+.mgr-hdr{background:#fff;border-bottom:1px solid var(--bdr);box-shadow:0 1px 4px rgba(0,0,0,0.06);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.mgr-hdr .brand{font-size:20px;font-weight:700;letter-spacing:1px;color:var(--teal);font-weight:800}
+.mgr-hdr .role-badge{background:var(--teal-d);border:1px solid var(--teal);border-radius:20px;color:var(--teal);font-size:12px;font-weight:600;padding:4px 12px;letter-spacing:1px}
+.mgr-main{flex:1;padding:16px;max-width:1000px;margin:0 auto;width:100%}
+
+/* Filters */
+.filter-bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;align-items:flex-end}
+.fb-group{display:flex;flex-direction:column;gap:5px;min-width:140px;flex:1}
+.fb-group label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);font-weight:600}
+.fb-group select,.fb-group input[type=date]{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);color:var(--text);font-family:inherit;font-size:14px;padding:9px 12px;outline:none;-webkit-appearance:none;cursor:pointer;transition:border-color .2s}
+.fb-group select:focus,.fb-group input[type=date]:focus{border-color:var(--grn)}
+.btn-refresh{background:var(--teal);color:#fff;border:none;border-radius:var(--rs);font-family:inherit;font-size:14px;font-weight:700;padding:10px 18px;cursor:pointer;letter-spacing:1px;transition:opacity .2s;align-self:flex-end}
+.btn-refresh:active{opacity:.8}
+.btn-export{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);color:var(--text);font-family:inherit;font-size:13px;font-weight:600;padding:10px 16px;cursor:pointer;letter-spacing:.5px;transition:all .2s;align-self:flex-end}
+.btn-export:hover{border-color:var(--grn);color:var(--grn)}
+
+/* Summary cards */
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px}
+.sum-card{background:var(--s1);border:1px solid var(--bdr);border-radius:var(--rs);padding:14px 10px;text-align:center}
+.sum-card .sv{font-size:26px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1}
+.sum-card .sl{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);margin-top:4px}
+.sum-card.s-insp .sv{color:var(--blu)}
+.sum-card.s-pass .sv{color:var(--grn)}
+.sum-card.s-alt  .sv{color:var(--org)}
+.sum-card.s-rej  .sv{color:var(--red)}
+.sum-card.s-dhu  .sv{color:var(--org)}
+.sum-card.s-dhu{border-color:var(--org);background:var(--org-d)}
+.sum-card.s-alt-rate .sv{color:var(--pur)}
+
+/* Section title */
+.sec-title{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);margin-bottom:10px;font-weight:600;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--bdr)}
+
+/* Tables */
+.tbl-wrap{overflow-x:auto;margin-bottom:20px;border-radius:var(--rs);border:1px solid var(--bdr)}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
+th{background:var(--s2);padding:10px 12px;text-align:left;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2);font-weight:600;border-bottom:1px solid var(--bdr);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--bdr);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--s2)}
+.td-num{font-family:'JetBrains Mono',monospace;text-align:right}
+.td-pass{color:var(--grn);font-weight:600}
+.td-alt{color:var(--org);font-weight:600}
+.td-rej{color:var(--red);font-weight:600}
+.td-dhu{color:var(--org);font-weight:700;font-family:'JetBrains Mono',monospace}
+.dhu-bar{display:flex;align-items:center;gap:6px}
+.dhu-track{flex:1;height:5px;background:var(--s3);border-radius:3px;overflow:hidden;min-width:40px}
+.dhu-fill{height:100%;border-radius:3px;background:var(--org);}  
+.dhu-fill.good{background:var(--grn)}
+.dhu-fill.bad{background:var(--red)}
+.rank-badge{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-right:4px}
+.rank-1{background:rgba(251,191,36,.2);color:var(--yel);border:1px solid var(--yel)}
+.rank-2{background:rgba(77,166,255,.15);color:var(--blu);border:1px solid var(--blu)}
+.rank-3{background:rgba(167,139,250,.15);color:var(--pur);border:1px solid var(--pur)}
+.rank-n{background:var(--s3);color:var(--t2);border:1px solid var(--bdr)}
+
+/* Defect chart */
+.defect-chart{margin-bottom:20px}
+.def-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.def-bar-name{font-size:13px;color:var(--text);min-width:160px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.def-bar-track{flex:1;height:18px;background:var(--s2);border-radius:4px;overflow:hidden;position:relative}
+.def-bar-fill{height:100%;background:var(--org);border-radius:4px;transition:width .6s ease}
+.def-bar-ct{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t2);min-width:32px;text-align:right}
+
+/* Nav tabs for manager */
+.mgr-tabs{display:flex;gap:6px;margin-bottom:18px;background:var(--s1);border:1px solid var(--bdr);border-radius:var(--rs);padding:4px}
+.mtab{flex:1;background:none;border:none;border-radius:6px;color:var(--t2);font-family:inherit;font-size:13px;font-weight:600;padding:9px 8px;cursor:pointer;transition:all .2s;letter-spacing:.5px;text-align:center}
+.mtab.active{background:var(--teal);color:#fff}
+
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* Loading spinner inline */
+.inline-spin{display:inline-block;width:16px;height:16px;border:2px solid var(--bdr);border-top-color:var(--grn);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+
+@media(max-width:380px){
+  .big-box .bv{font-size:22px}
+  .act-btn{padding:14px 4px;font-size:12px}
+  .act-btn .bi{font-size:22px}
+  .sum-grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading"><div class="spin"></div><div class="load-txt" id="load-txt">Loading Sewlytics...</div></div>
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="logo-brand">SEWLYTICS</div>
+  <div class="logo-tag">Quality Control System</div>
+  <div class="login-card">
+    <h2>Sign In</h2>
+    <div class="fld"><label>Username</label><input type="text" id="lu" autocomplete="username" autocorrect="off" autocapitalize="off" placeholder="Enter username"></div>
+    <div class="fld"><label>Password</label><input type="password" id="lp" autocomplete="current-password" placeholder="Enter password"></div>
+    <button class="btn-login" onclick="doLogin()">Login →</button>
+    <div class="err-msg" id="lerr">Invalid username or password</div>
+  </div>
+</div>
+
+<!-- CHECKER APP -->
+<div id="app">
+  <div class="hdr">
+    <div class="hdr-brand">SEWLYTICS</div>
+    <div class="hdr-right">
+      <div class="save-dot" id="sdot"></div>
+      <div class="lang-tog">
+        <button class="lang-btn active" onclick="setLang('en')" id="ben">EN</button>
+        <button class="lang-btn" onclick="setLang('hi')" id="bhi">हि</button>
+      </div>
+      <button class="btn-sm" onclick="doLogout()">Exit</button>
+    </div>
+  </div>
+  <div class="info-bar">
+    <span>👤 <span class="v" id="cn">—</span></span>
+    <span>📍 <span class="v" id="cli">—</span></span>
+    <div id="live-time">—</div>
+  </div>
+  <div class="main">
+    <!-- STYLE + LINE -->
+    <div class="card">
+      <div class="card-title" id="lss">Select Style &amp; Line</div>
+      <div style="margin-bottom:10px">
+        <div class="sel-lbl" id="lst">Style</div>
+        <div class="srch-wrap" id="swrap">
+          <input type="text" id="ssrch" placeholder="Type to search style..." autocomplete="off" autocorrect="off" autocapitalize="off" oninput="filterStyle()" onfocus="openStyleDD()" onkeydown="styleKey(event)">
+          <div class="s-drop" id="sdd"></div>
+          <input type="hidden" id="sval">
+        </div>
+      </div>
+      <div class="sel-row">
+        <div>
+          <div class="sel-lbl" id="lln">Line</div>
+          <div class="sel-wrap">
+            <select id="lsel" onchange="onLineChange()"><option value="">— Line —</option></select>
+          </div>
+        </div>
+        <div>
+          <div class="sel-lbl">DHU %</div>
+          <div class="dhu-pill" id="dhup">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BIG 3 STATS + DHU — Today big, All-time small below -->
+    <div class="big-stats">
+      <div class="big-box pass">
+        <div class="bv" id="sp">0</div>
+        <div class="bl">Pass (All)</div>
+        <div class="at-val" id="sp-all" style="color:var(--teal)"></div>
+      </div>
+      <div class="big-box alter">
+        <div class="bv" id="sa">0</div>
+        <div class="bl">Alter (All)</div>
+        <div class="at-val" id="sa-all" style="color:var(--teal)"></div>
+      </div>
+      <div class="big-box reject">
+        <div class="bv" id="sr">0</div>
+        <div class="bl">Reject (All)</div>
+        <div class="at-val" id="sr-all" style="color:var(--teal)"></div>
+      </div>
+      <div class="big-box dhu">
+        <div class="bv" id="dhub">—</div>
+        <div class="bl">DHU % (All)</div>
+        <div class="at-val" id="dhu-all"></div>
+      </div>
+    </div>
+
+    <!-- INFO STRIP (Cut, Sew, Balance + More) -->
+    <div class="info-strip">
+      <div class="i-chip"><span id="lcut">Cut</span>: <span class="iv" id="scut">—</span></div>
+      <div class="i-sep">·</div>
+      <div class="i-chip"><span id="lsew">Sew</span>: <span class="iv blu" id="ssew">—</span></div>
+      <div class="i-sep">·</div>
+      <div class="i-chip"><span id="lbal">Balance</span>: <span class="iv blu" id="sbal">—</span></div>
+      <button class="btn-more" id="btnmore" onclick="toggleDetail()">ⓘ More</button>
+    </div>
+
+    <!-- EXPANDED DETAIL -->
+    <div class="detail-panel" id="dtl">
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:6px;font-weight:700">TODAY</div>
+      <div class="detail-grid" style="margin-bottom:10px">
+        <div class="det-box" style="background:#f0fdf4;border-color:var(--grn)"><div class="dv" style="color:var(--grn)" id="td-pass">0</div><div class="dl">Pass</div></div>
+        <div class="det-box" style="background:#fffbeb;border-color:var(--org)"><div class="dv" style="color:var(--org)" id="td-alter">0</div><div class="dl">Alter</div></div>
+        <div class="det-box" style="background:#fef2f2;border-color:var(--red)"><div class="dv" style="color:var(--red)" id="td-reject">0</div><div class="dl">Reject</div></div>
+        <div class="det-box" style="background:#fffbeb;border-color:var(--org)"><div class="dv" style="color:var(--org);font-size:16px" id="td-dhu">—</div><div class="dl">DHU%</div></div>
+      </div>
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);margin-bottom:6px;font-weight:700">ALL TIME</div>
+      <div class="detail-grid">
+        <div class="det-box repass"><div class="dv" id="drp">0</div><div class="dl">Re-Pass</div></div>
+        <div class="det-box rereject"><div class="dv" id="drr">0</div><div class="dl">Re-Reject</div></div>
+        <div class="det-box tpass"><div class="dv" id="dtp">0</div><div class="dl">Total Pass</div></div>
+        <div class="det-box treject"><div class="dv" id="dtr">0</div><div class="dl">Total Reject</div></div>
+      </div>
+    </div>
+
+    <!-- BANNER --><!-- BANNER -->
+    <div class="banner" id="banner"></div>
+
+    <!-- PIECE COUNTER -->
+    <div class="pcs-row">
+      <div class="pcs-lbl" id="lpcs">Pieces</div>
+      <div class="ctr">
+        <button class="ctr-btn" onclick="chgPcs(-1)">−</button>
+        <div class="ctr-val" id="pcsv">1</div>
+        <button class="ctr-btn" onclick="chgPcs(1)">+</button>
+      </div>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="act-row">
+      <button class="act-btn pass" id="bpass" onclick="doAction('Pass')" disabled><span class="bi">✅</span><span id="lpb">PASS</span></button>
+      <button class="act-btn alter" id="balter" onclick="doAction('Alter')" disabled><span class="bi">🟠</span><span id="lab">ALTER</span></button>
+      <button class="act-btn reject" id="breject" onclick="doAction('Reject')" disabled><span class="bi">❌</span><span id="lrb">REJECT</span></button>
+    </div>
+
+    <!-- DONE / REFRESH ROW -->
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="refreshScreen()" style="flex:1;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);color:var(--t2);font-family:inherit;font-size:13px;font-weight:600;padding:11px;cursor:pointer;letter-spacing:.5px;transition:all .2s" onmouseover="this.style.borderColor='var(--grn)';this.style.color='var(--grn)'" onmouseout="this.style.borderColor='var(--bdr)';this.style.color='var(--t2)'">↻ Refresh Data</button>
+      <button onclick="clearSelection()" style="flex:1;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);color:var(--t2);font-family:inherit;font-size:13px;font-weight:600;padding:11px;cursor:pointer;letter-spacing:.5px;transition:all .2s" onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--bdr)';this.style.color='var(--t2)'">✕ Clear</button>
+    </div>
+
+    <!-- ALTER QUEUE STRIP -->
+    <div class="alt-strip" id="aqstrip" onclick="openQueue()">
+      <div><div class="alt-info" id="laq">🟠 Alter Pending</div><div class="alt-sub" id="lri">Tap to Re-inspect →</div></div>
+      <div class="alt-ct" id="aqct">0</div>
+    </div>
+  </div>
+</div>
+
+<!-- DEFECT SHEET -->
+<div class="overlay" id="dov" onclick="closeDefect(true)"></div>
+<div class="sheet" id="dsh">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr">
+    <div><div class="sh-title" id="dshtitle">Select Defect</div><div class="sh-sub" id="dshsub">—</div></div>
+    <button class="btn-back" onclick="closeDefect(true)">← Back</button>
+  </div>
+  <div class="sh-body">
+    <div class="def-search"><span class="si">🔍</span><input type="text" id="dsrch" oninput="filterDef()" autocorrect="off" placeholder="Search defect..."></div>
+    <div id="dlist"></div>
+    <div class="add-def-btn" onclick="togAddDef()">➕ <span id="ladd">Add New Defect</span></div>
+    <div id="addform" style="display:none" class="add-form">
+      <input type="text" id="nen" placeholder="Defect name (English)">
+      <input type="text" id="nhi" placeholder="दोष का नाम (हिंदी)" style="font-family:'Noto Sans Devanagari',sans-serif">
+      <select id="ncat">
+        <option value="Stitching">Stitching / सिलाई</option>
+        <option value="Finishing">Finishing / फिनिशिंग</option>
+        <option value="Label">Label / लेबल</option>
+        <option value="Shape">Shape / शेप</option>
+        <option value="Assembly">Assembly / असेंबली</option>
+      </select>
+      <button class="btn-confirm" onclick="saveNewDef()">Save Defect</button>
+    </div>
+  </div>
+  <div class="sh-foot"><button class="btn-confirm" id="bconf" onclick="confirmDef()" disabled>Confirm &amp; Save</button></div>
+</div>
+
+<!-- ALTER QUEUE SHEET -->
+<div class="overlay" id="qov" onclick="closeQueue()"></div>
+<div class="sheet" id="qsh">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><div><div class="sh-title" id="laqt">🟠 Alter Queue</div><div class="sh-sub" id="laqsub">Re-inspect returned pieces</div></div></div>
+  <div class="sh-body" id="qbody"></div>
+</div>
+
+<!-- MANAGER APP -->
+<div id="mgr-app">
+  <div class="mgr-hdr">
+    <div class="brand">SEWLYTICS</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="role-badge">MANAGER</div>
+      <button class="btn-sm" onclick="doLogout()">Exit</button>
+    </div>
+  </div>
+  <div class="mgr-main">
+
+    <!-- FILTERS -->
+    <div class="filter-bar">
+      <div class="fb-group">
+        <label>From Date</label>
+        <input type="date" id="fdt1">
+      </div>
+      <div class="fb-group">
+        <label>To Date</label>
+        <input type="date" id="fdt2">
+      </div>
+      <div class="fb-group">
+        <label>Line</label>
+        <select id="fline"><option value="">All Lines</option></select>
+      </div>
+      <div class="fb-group">
+        <label>Customer</label>
+        <select id="fcust"><option value="">All Customers</option></select>
+      </div>
+      <div class="fb-group" style="min-width:200px;flex:2">
+        <label>Style</label>
+        <div class="srch-wrap" id="rpt-swrap">
+          <input type="text" id="rpt-ssrch" placeholder="All Styles — type to filter..."
+            autocomplete="off" autocorrect="off" autocapitalize="off"
+            oninput="filterRptStyle()" onfocus="openRptStyleDD()" onkeydown="rptStyleKey(event)"
+            style="font-weight:500;font-size:13px">
+          <div class="s-drop" id="rpt-sdd"></div>
+          <input type="hidden" id="rpt-sval">
+        </div>
+      </div>
+      <button class="btn-refresh" onclick="loadReport()">↻ Refresh</button>
+      <button class="btn-export" onclick="exportCSV()">↓ Export CSV</button>
+    </div>
+
+    <!-- SUMMARY CARDS -->
+    <div class="sum-grid">
+      <div class="sum-card s-insp"><div class="sv" id="ms-insp">—</div><div class="sl">Inspected</div></div>
+      <div class="sum-card s-pass"><div class="sv" id="ms-pass">—</div><div class="sl">Pass</div></div>
+      <div class="sum-card s-alt"><div class="sv" id="ms-alt">—</div><div class="sl">Alter</div></div>
+      <div class="sum-card s-rej"><div class="sv" id="ms-rej">—</div><div class="sl">Reject</div></div>
+      <div class="sum-card s-dhu"><div class="sv" id="ms-dhu">—</div><div class="sl">Line DHU %</div></div>
+      <div class="sum-card s-alt-rate"><div class="sv" id="ms-ar">—</div><div class="sl">Alter Pass Rate</div></div>
+    </div>
+
+    <!-- TABS -->
+    <div class="mgr-tabs">
+      <button class="mtab active" onclick="showTab('style')">Style DHU</button>
+      <button class="mtab" onclick="showTab('line')">Line Ranking</button>
+      <button class="mtab" onclick="showTab('defect')">Defect Analysis</button>
+      <button class="mtab" onclick="showTab('alter')">Alter TAT</button>
+    </div>
+
+    <!-- TAB: STYLE DHU -->
+    <div class="tab-panel active" id="tab-style">
+      <div class="sec-title">Style-wise DHU Report</div>
+      <div class="tbl-wrap">
+        <table id="tbl-style">
+          <thead><tr>
+            <th>Style ID</th><th>PO</th><th>Customer</th><th>Type</th>
+            <th class="td-num">Cut</th><th class="td-num">Inspected</th>
+            <th class="td-num">Pass</th><th class="td-num">Alter</th><th class="td-num">Reject</th>
+            <th class="td-num">Re-Pass<br><span style="font-size:9px;opacity:.6;font-weight:400">All Time</span></th>
+            <th class="td-num">Total Pass</th><th class="td-num">Total Reject</th>
+            <th>DHU %</th>
+          </tr></thead>
+          <tbody id="tbody-style"><tr><td colspan="12" style="text-align:center;color:var(--t2);padding:20px">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: LINE RANKING -->
+    <div class="tab-panel" id="tab-line">
+      <div class="sec-title">Line DHU Ranking — Best to Worst</div>
+      <div class="tbl-wrap">
+        <table id="tbl-line">
+          <thead><tr>
+            <th>Rank</th><th>Line</th><th>Floor</th>
+            <th class="td-num">Inspected</th><th class="td-num">Pass</th>
+            <th class="td-num">Alter</th><th class="td-num">Reject</th>
+            <th>DHU %</th><th class="td-num">Alter Pass Rate</th>
+          </tr></thead>
+          <tbody id="tbody-line"><tr><td colspan="9" style="text-align:center;color:var(--t2);padding:20px">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: DEFECT ANALYSIS -->
+    <div class="tab-panel" id="tab-defect">
+      <div class="sec-title">Top Defects — Frequency (Pareto)</div>
+      <div class="defect-chart" id="defect-chart"></div>
+      <div class="sec-title" style="margin-top:10px">Defect Detail Table</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Defect</th><th>Category</th><th class="td-num">Count</th><th class="td-num">% of Total</th></tr></thead>
+          <tbody id="tbody-defect"><tr><td colspan="4" style="text-align:center;color:var(--t2);padding:20px">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: ALTER TAT -->
+    <div class="tab-panel" id="tab-alter">
+      <div class="sec-title">Alter Queue — Turnaround Analysis</div>
+      <div class="sum-grid" style="margin-bottom:16px">
+        <div class="sum-card s-alt"><div class="sv" id="tat-total">—</div><div class="sl">Total Alter</div></div>
+        <div class="sum-card s-pass"><div class="sv" id="tat-pass">—</div><div class="sl">Re-Inspected Pass</div></div>
+        <div class="sum-card s-rej"><div class="sv" id="tat-rej">—</div><div class="sl">Re-Inspected Reject</div></div>
+        <div class="sum-card s-alt-rate"><div class="sv" id="tat-pend">—</div><div class="sl">Pending</div></div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Style ID</th><th>Line</th><th>Defect</th>
+            <th class="td-num">Pcs</th><th>Date Sent</th><th>Status</th>
+            <th class="td-num">TAT Hrs</th>
+          </tr></thead>
+          <tbody id="tbody-alter"><tr><td colspan="7" style="text-align:center;color:var(--t2);padding:20px">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════
+const AT_TOKEN = 'patmNt5Vm04kzZdl8.2c97257a441322ea4c48a1a7a09e1d75487c09df340bf048b966aea2f29b213d';
+const AT_BASE  = 'app1uDGheiTDjdCqb';
+// Supabase — all tables live here
+const SB_URL      = 'https://fvuhyytkgjqvgaluccrr.supabase.co';
+const SB_ANON_KEY = 'sb_publishable_tVaLrraNia1ooHGzd3K7vg_ne2gZt0m';
+const TABLES   = {
+  orders:'Orders', lines:'Lines', defects:'Defect Master',
+  inspections:'QC Inspections', alterQueue:'Alter Queue', users:'App Users'
+};
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let lang='en', currentUser=null, allOrders=[], allLines=[], allDefects=[];
+let alterQueue=[], selectedStyle=null, selectedLine=null, pieceCount=1;
+let pendingAction=null, selectedDefects=[], sessionId='S'+Date.now();
+let actionCooldown=false, detailOpen=false;
+let reportData=[], reportAlter=[];
+
+// ═══════════════════════════════════════════
+// TRANSLATIONS
+// ═══════════════════════════════════════════
+const T={
+  en:{lss:'Select Style & Line',lst:'Style',lln:'Line',lpcs:'Pieces',
+      lp:'Pass',la:'Alter',lr:'Reject',lpb:'PASS',lab:'ALTER',lrb:'REJECT',
+      lcut:'Cut',lsew:'Sew',lbal:'Balance',ltp:'Total Pass',ltr:'Total Reject',
+      ltoday:'Today P / A / R',laq:'🟠 Alter Pending',lri:'Tap to Re-inspect →',
+      laqt:'🟠 Alter Queue',laqsub:'Re-inspect returned pieces',
+      ladd:'Add New Defect',noalt:'No pending alter pieces',
+      selstyle:'Select a style first',selline:'Select a line too',
+      seldef:'Select at least one defect'},
+  hi:{lss:'स्टाइल और लाइन चुनें',lst:'स्टाइल',lln:'लाइन',lpcs:'पीस',
+      lp:'पास',la:'ऑल्टर',lr:'रिजेक्ट',lpb:'पास',lab:'ऑल्टर',lrb:'रिजेक्ट',
+      lcut:'कट',lsew:'सिलाई',lbal:'बैलेंस',ltp:'कुल पास',ltr:'कुल रिजेक्ट',
+      ltoday:'आज P / A / R',laq:'🟠 ऑल्टर बाकी',lri:'दोबारा जांच →',
+      laqt:'🟠 ऑल्टर कतार',laqsub:'वापस आए पीस',
+      ladd:'नया दोष जोड़ें',noalt:'कोई ऑल्टर पीस नहीं',
+      selstyle:'पहले स्टाइल चुनें',selline:'लाइन भी चुनें',
+      seldef:'कम से कम एक दोष चुनें'}
+};
+const t=k=>(T[lang]&&T[lang][k])||T.en[k]||k;
+
+// ═══════════════════════════════════════════
+// SUPABASE API
+// ═══════════════════════════════════════════
+const _sbH=()=>({apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`});
+async function sbGet(path){
+  const res=await fetch(`${SB_URL}/rest/v1/${path}`,{headers:_sbH()});
+  if(!res.ok) throw new Error(`SB ${res.status}`);
+  return res.json();
+}
+async function sbPost(table,body){
+  const res=await fetch(`${SB_URL}/rest/v1/${table}`,{
+    method:'POST',
+    headers:{..._sbH(),'Content-Type':'application/json',Prefer:'return=representation'},
+    body:JSON.stringify(body)
+  });
+  if(!res.ok){const e=await res.json();throw new Error(e.message||e.hint||res.status)}
+  const rows=await res.json();return Array.isArray(rows)?rows[0]:rows;
+}
+async function sbPatch(table,id,body){
+  const res=await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`,{
+    method:'PATCH',
+    headers:{..._sbH(),'Content-Type':'application/json',Prefer:'return=minimal'},
+    body:JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error(`SB patch ${res.status}`);
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+window.onload=async function(){
+  showLoad('Loading Sewlytics...');
+  const saved=sessionStorage.getItem('sw_user');
+  if(saved){currentUser=JSON.parse(saved);await initApp();}
+  else{hideLoad();showLogin();}
+  startClock();
+};
+function startClock(){
+  const el=document.getElementById('live-time');
+  setInterval(()=>{
+    const n=new Date();
+    el.textContent=n.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})+
+      '  '+n.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+  },1000);
+}
+
+// ═══════════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════════
+function showLogin(){document.getElementById('login-screen').style.display='flex'}
+function hideLogin(){document.getElementById('login-screen').style.display='none'}
+async function doLogin(){
+  const u=document.getElementById('lu').value.trim();
+  const p=document.getElementById('lp').value.trim();
+  if(!u||!p)return;
+  showLoad('Verifying...');
+  document.getElementById('lerr').style.display='none';
+  try{
+    const recs=await sbGet(`app_users?username=eq.${encodeURIComponent(u)}&is_active=eq.true`);
+    if(!recs.length)throw new Error('not found');
+    const uf=recs[0];
+    if(uf.password!==p)throw new Error('wrong pass');
+    const role=uf.role||'';
+    currentUser={id:uf.id,username:uf.username,fullName:uf.full_name||uf.username,
+      role,assignedLine:uf.assigned_line||'',floor:uf.floor||''};
+    sessionStorage.setItem('sw_user',JSON.stringify(currentUser));
+    try{await sbPatch('app_users',uf.id,{last_login:new Date().toISOString()})}catch(e){}
+    await initApp();
+  }catch(e){
+    hideLoad();
+    document.getElementById('lerr').style.display='block';
+  }
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none')doLogin();
+});
+function doLogout(){
+  sessionStorage.removeItem('sw_user');currentUser=null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('mgr-app').style.display='none';
+  showLogin();hideLoad();
+}
+
+// ═══════════════════════════════════════════
+// INIT APP
+// ═══════════════════════════════════════════
+async function initApp(){
+  const rawRole=(currentUser.role||'').toLowerCase().trim();
+  // Flexible role check — handles Admin, admin, ADMIN, Manager, manager etc
+  const isMgr=rawRole.includes('admin')||rawRole.includes('manager');
+  console.log('User role:', currentUser.role, '→ isMgr:', isMgr);
+  showLoad('Loading data...');
+  try{
+    // Managers don't need alter queue on load
+    if(isMgr){
+      await Promise.all([loadOrders(),loadLines(),loadDefects()]);
+    } else {
+      await Promise.all([loadOrders(),loadLines(),loadDefects(),loadAlterQueue()]);
+    }
+    hideLoad();hideLogin();
+    if(isMgr){
+      document.getElementById('mgr-app').style.display='flex';
+      initManagerFilters();
+      loadReport();
+    } else {
+      document.getElementById('app').style.display='flex';
+      document.getElementById('cn').textContent=currentUser.fullName;
+      document.getElementById('cli').textContent=currentUser.assignedLine||'All Lines';
+      populateStyleDD();
+      applyTrans();
+    }
+  }catch(e){
+    hideLoad();showToast('Error loading data','reject');console.error(e);
+  }
+}
+
+// ═══════════════════════════════════════════
+// DATA LOAD
+// ═══════════════════════════════════════════
+async function loadOrders(){
+  const res=await fetch(`${SB_URL}/rest/v1/orders?select=*&order=style_id.asc`,{
+    headers:{apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`}
+  });
+  if(!res.ok) throw new Error(`SB orders ${res.status}`);
+  const recs=await res.json();
+  allOrders=recs.map(r=>({
+    id:r.airtable_id,styleId:r.style_id,style:r.style||'',
+    color:r.color||'',po:r.po||'',customer:r.customer||'',
+    description:r.description||'',type:r.type||'',
+    orderQty:r.order_qty||0,cutQty:r.cut_qty||0,
+    sewQty:r.sew_qty||0,finishQty:r.finish_qty||0,
+    linesRaw:r.lines_raw||''
+  })).filter(o=>o.styleId);
+}
+async function loadLines(){
+  const res=await fetch(`${SB_URL}/rest/v1/lines?select=*&order=line_name.asc`,{
+    headers:{apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`}
+  });
+  if(!res.ok) throw new Error(`SB lines ${res.status}`);
+  const recs=await res.json();
+  allLines=recs.map(r=>({
+    id:String(r.id),lineName:r.line_name||'',floor:r.floor||'',
+    contractor:r.contractor||'',abbr:r.abbr||''
+  })).filter(l=>l.lineName);
+  // Resolve linked assigned line
+  if(currentUser&&currentUser.assignedLine&&currentUser.assignedLine.startsWith('rec')){
+    const found=allLines.find(l=>l.id===currentUser.assignedLine);
+    if(found){currentUser.assignedLine=found.lineName;currentUser.floor=found.floor;
+      const el=document.getElementById('cli');if(el)el.textContent=found.lineName;}
+  }
+}
+async function loadDefects(){
+  const recs=await sbGet('defect_master?is_active=eq.true&order=sort_order.asc');
+  allDefects=recs.map(r=>({
+    id:r.id,nameEN:r.name_en||'',nameHI:r.name_hi||'',
+    category:r.category||'Others',isActive:true,sortOrder:r.sort_order||99
+  })).filter(d=>d.nameEN);
+}
+async function loadAlterQueue(){
+  const lf=(selectedLine&&selectedLine.lineName)?selectedLine.lineName
+    :(currentUser&&currentUser.assignedLine?currentUser.assignedLine:null);
+  let path='alter_queue?status=eq.Pending';
+  if(lf) path+=`&line_name=eq.${encodeURIComponent(lf)}`;
+  const recs=await sbGet(path);
+  alterQueue=recs.map(r=>({
+    id:r.id,styleId:r.style_id||'',style:r.style||'',
+    color:r.color||'',po:r.po||'',lineName:r.line_name||'',
+    defectEN:r.defect_name_en||'',pieces:r.pieces_count||1,
+    dateSent:r.date_sent||'',origId:r.original_inspection_id||''
+  }));
+  updateQueueUI();
+}
+
+// ═══════════════════════════════════════════
+// STYLE SEARCHABLE DROPDOWN
+// ═══════════════════════════════════════════
+let ddHi=-1;
+function populateStyleDD(){document.getElementById('ssrch').value='';document.getElementById('sval').value='';}
+function openStyleDD(){filterStyle();document.getElementById('sdd').classList.add('open')}
+function closeStyleDD(){document.getElementById('sdd').classList.remove('open')}
+function filterStyle(){
+  const q=document.getElementById('ssrch').value.trim().toLowerCase();
+  const dd=document.getElementById('sdd');dd.innerHTML='';ddHi=-1;
+  const filtered=q?allOrders.filter(o=>
+    o.styleId.toLowerCase().includes(q)||o.style.toLowerCase().includes(q)||
+    o.color.toLowerCase().includes(q)||o.customer.toLowerCase().includes(q)||
+    o.po.toLowerCase().includes(q)||o.description.toLowerCase().includes(q)
+  ):allOrders.slice(0,60);
+  if(!filtered.length){dd.innerHTML='<div class="d-empty">No styles found</div>';dd.classList.add('open');return;}
+  filtered.forEach(o=>{
+    const div=document.createElement('div');div.className='d-item';
+    // Highlight matching text in styleId and PO
+    const hlStyle=q?o.styleId.replace(new RegExp(`(${q})`,'gi'),'<mark>$1</mark>'):o.styleId;
+    const hlPO=q?o.po.replace(new RegExp(`(${q})`,'gi'),'<mark>$1</mark>'):o.po;
+    div.innerHTML=`
+      <div class="dm">${hlStyle}</div>
+      <div class="ds" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:3px">
+        <span style="background:rgba(77,166,255,0.15);color:#4da6ff;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700">${hlPO}</span>
+        <span>${o.color}</span>
+        <span style="color:var(--t3)">·</span>
+        <span>${o.customer}</span>
+        <span style="color:var(--t3)">·</span>
+        <span style="color:var(--grn)">Cut: ${o.cutQty}</span>
+      </div>`;
+    let touchStartY2=0;
+    div.addEventListener('touchstart',e=>{touchStartY2=e.touches[0].clientY;},{passive:true});
+    div.addEventListener('touchend',e=>{
+      if(Math.abs(e.changedTouches[0].clientY-touchStartY2)<8){e.preventDefault();selectStyle(o);}
+    });
+    div.addEventListener('mousedown',e=>{e.preventDefault();selectStyle(o)});
+    dd.appendChild(div);
+  });
+  dd.classList.add('open');
+}
+function selectStyle(o){
+  document.getElementById('ssrch').value=`${o.styleId} — ${o.po} — ${o.customer}`;
+  document.getElementById('ssrch').classList.add('has-val');
+  document.getElementById('sval').value=o.styleId;
+  closeStyleDD();selectedStyle=o;onStyleSelected();
+}
+function styleKey(e){
+  const items=document.getElementById('sdd').querySelectorAll('.d-item');
+  if(e.key==='ArrowDown'){e.preventDefault();ddHi=Math.min(ddHi+1,items.length-1);items.forEach((el,i)=>el.classList.toggle('hi',i===ddHi));}
+  else if(e.key==='ArrowUp'){e.preventDefault();ddHi=Math.max(ddHi-1,0);items.forEach((el,i)=>el.classList.toggle('hi',i===ddHi));}
+  else if(e.key==='Enter'&&ddHi>=0){const q=document.getElementById('ssrch').value.trim().toLowerCase();
+    const f=allOrders.filter(o=>o.styleId.toLowerCase().includes(q)||o.customer.toLowerCase().includes(q));
+    if(f[ddHi])selectStyle(f[ddHi]);}
+  else if(e.key==='Escape')closeStyleDD();
+}
+document.addEventListener('click',e=>{if(!document.getElementById('swrap').contains(e.target))closeStyleDD();});
+
+// ═══════════════════════════════════════════
+// STYLE / LINE CHANGE
+// ═══════════════════════════════════════════
+function onStyleSelected(){
+  selectedLine=null;resetStats();
+  if(selectedStyle){
+    document.getElementById('scut').textContent=selectedStyle.cutQty||'—';
+    document.getElementById('ssew').textContent=selectedStyle.sewQty||'—';
+    document.getElementById('sbal').textContent='…';
+  }
+  const lsel=document.getElementById('lsel');
+  lsel.innerHTML='<option value="">— Line —</option>';
+  if(!selectedStyle){updateBtns();return;}
+  const sl=selectedStyle.linesRaw.split(',').map(s=>s.trim()).filter(Boolean);
+  const lines=[...new Set(sl.length?sl:allLines.map(l=>l.lineName))];
+  lines.forEach(ln=>{
+    const lo=allLines.find(l=>l.lineName===ln);
+    const opt=document.createElement('option');
+    opt.value=ln;opt.textContent=ln+(lo?` · ${lo.floor||''}`:'');
+    lsel.appendChild(opt);
+  });
+  const al=currentUser.assignedLine;
+  if(al){
+    if(!lines.includes(al)){
+      const lo=allLines.find(l=>l.lineName===al);
+      const opt=document.createElement('option');
+      opt.value=al;opt.textContent=al+(lo?` · ${lo.floor||''}`:'')+'  ★';
+      lsel.insertBefore(opt,lsel.children[1]);
+    }
+    lsel.value=al;onLineChange();
+  } else if(lines.length===1){lsel.value=lines[0];onLineChange();}
+  updateBtns();
+}
+function onLineChange(){
+  const v=document.getElementById('lsel').value;
+  selectedLine=v?(allLines.find(l=>l.lineName===v)||{lineName:v,floor:''}):null;
+  updateBtns();
+  if(selectedStyle&&selectedLine){loadStats();loadAlterQueue();}
+}
+function resetStats(){
+  ['sp','sa','sr','dhub','dhup'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.textContent='…';
+  });
+  ['sp-all','sa-all','sr-all','dhu-all'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='';});
+  ['td-pass','td-alter','td-reject','td-dhu'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='…';});
+  ['drp','drr','dtp','dtr'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='…';});
+  document.getElementById('stod').textContent='…';
+  document.getElementById('sbal').textContent='…';
+  document.getElementById('banner').style.display='none';
+}
+function updateBtns(){
+  const ok=!!(selectedStyle&&selectedLine);
+  ['bpass','balter','breject'].forEach(id=>document.getElementById(id).disabled=!ok);
+}
+
+// ═══════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════
+async function loadStats(){
+  if(!selectedStyle||!selectedLine)return;
+  const today=new Date().toISOString().split('T')[0];
+  const path=`qc_inspections?style_id=eq.${encodeURIComponent(selectedStyle.styleId)}&po=eq.${encodeURIComponent(selectedStyle.po)}&line_name=eq.${encodeURIComponent(selectedLine.lineName)}&select=result,pieces_count,is_alter_reinspection,inspection_datetime`;
+  const rows=await sbGet(path);
+  const recs=rows.map(r=>({fields:{
+    'Result':r.result,'Pieces Count':r.pieces_count,
+    'Is Alter Reinspection':r.is_alter_reinspection,
+    'Inspection DateTime':r.inspection_datetime
+  }}));
+  let passToday=0,alterToday=0,rejectToday=0;
+  let pass=0,alter=0,reject=0,rp=0,rr=0;
+
+  recs.forEach(r=>{
+    const pcs=r.fields['Pieces Count']||0;if(!pcs)return;
+    const res=r.fields['Result']||'';
+    const isRI=!!(r.fields['Is Alter Reinspection']);
+    const isToday=(r.fields['Inspection DateTime']||'').substring(0,10)===today;
+    if(!isRI){
+      if(res==='Pass'){pass+=pcs;if(isToday)passToday+=pcs;}
+      if(res==='Alter'){alter+=pcs;if(isToday)alterToday+=pcs;}
+      if(res==='Reject'){reject+=pcs;if(isToday)rejectToday+=pcs;}
+    } else {
+      if(res==='Pass')rp+=pcs;
+      if(res==='Reject')rr+=pcs;
+    }
+  });
+
+  const total=pass+alter+reject;
+  const totalToday=passToday+alterToday+rejectToday;
+  const totalGood=pass+rp;
+  const totalScrap=reject+rr;
+  const dhuAll=total>0?(((alter+reject)/total)*100).toFixed(1):'—';
+  const dhuToday=totalToday>0?(((alterToday+rejectToday)/totalToday)*100).toFixed(1):'—';
+
+  // Derived values needed below
+  const tpass = pass + rp;
+  const treject = reject + rr;
+  const sewQty = selectedStyle.sewQty || 0;
+  const cutQty = selectedStyle.cutQty || 0;
+  // Balance = Cut - Inspected (Sew is informational only)
+  const bal = cutQty > 0 ? Math.max(0, cutQty - total) : '—';
+
+  // Big boxes = ALL TIME, detail panel = TODAY
+  document.getElementById('sp').textContent    = pass;
+  document.getElementById('sa').textContent    = alter;
+  document.getElementById('sr').textContent    = reject;
+  document.getElementById('sp-all').textContent= '';
+  document.getElementById('sa-all').textContent= '';
+  document.getElementById('sr-all').textContent= '';
+  document.getElementById('dhub').textContent  = dhuAll!=='—'?dhuAll+'%':'—';
+  document.getElementById('dhu-all').textContent= '';
+  document.getElementById('dhup').textContent  = dhuAll!=='—'?dhuAll+'%':'—';
+  // Today section in detail panel
+  document.getElementById('td-pass').textContent  = passToday;
+  document.getElementById('td-alter').textContent = alterToday;
+  document.getElementById('td-reject').textContent= rejectToday;
+  document.getElementById('td-dhu').textContent   = totalToday>0?dhuToday+'%':'—';
+  document.getElementById('stod').textContent     = `${passToday}/${alterToday}/${rejectToday}`;
+  document.getElementById('drp').textContent=rp;
+  document.getElementById('drr').textContent=rr;
+  document.getElementById('dtp').textContent=tpass;
+  document.getElementById('dtr').textContent=treject;
+  document.getElementById('sbal').textContent = bal;
+  // Label and tooltip explain the formula
+  const balLbl = document.getElementById('lbal');
+  if(balLbl) balLbl.textContent = lang==='hi' ? 'जांच बाकी' : 'Balance';
+  // Tooltip shows formula breakdown
+  const balEl = document.getElementById('sbal');
+  if(balEl && cutQty > 0) {
+    balEl.title = `Cut(${cutQty}) − Inspected(${total}) = ${bal}`;
+  }
+
+  const banner=document.getElementById('banner');
+  const balNum=typeof bal==='number'?bal:(parseInt(bal)||0);
+  const overCut=cutQty>0&&total>=cutQty;
+  if(overCut){
+    banner.style.display='block';
+    banner.textContent=`⚠️ All ${cutQty} cut pieces inspected (${total} done). You can still add more if needed.`;
+    updateBtns();
+  } else {banner.style.display='none';updateBtns();}
+}
+
+function refreshScreen(){
+  if(selectedStyle && selectedLine){
+    showToast('Refreshing...','pass');
+    loadStats();
+    loadAlterQueue();
+  } else {
+    showToast('Select a style and line first','reject');
+  }
+}
+
+function clearSelection(){
+  selectedStyle=null; selectedLine=null; pieceCount=1;
+  document.getElementById('ssrch').value='';
+  document.getElementById('ssrch').classList.remove('has-val');
+  document.getElementById('sval').value='';
+  document.getElementById('lsel').innerHTML='<option value="">— Line —</option>';
+  document.getElementById('pcsv').textContent=1;
+  document.getElementById('dhup').textContent='—';
+  document.getElementById('dhub').textContent='—';
+  ['sp','sa','sr'].forEach(id=>document.getElementById(id).textContent='0');
+  ['drp','drr','dtp','dtr'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('stod').textContent='0 / 0 / 0';
+  document.getElementById('scut').textContent='—';
+  document.getElementById('ssew').textContent='—';
+  document.getElementById('sbal').textContent='—';
+  document.getElementById('banner').style.display='none';
+  document.getElementById('aqstrip').style.display='none';
+  updateBtns();
+}
+
+function toggleDetail(){
+  detailOpen=!detailOpen;
+  document.getElementById('dtl').classList.toggle('open',detailOpen);
+  document.getElementById('btnmore').textContent=detailOpen?'✕ Less':'ⓘ More';
+}
+
+// ═══════════════════════════════════════════
+// PIECES
+// ═══════════════════════════════════════════
+function chgPcs(d){pieceCount=Math.max(1,Math.min(99,pieceCount+d));document.getElementById('pcsv').textContent=pieceCount;}
+
+// ═══════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════
+async function doAction(act){
+  if(!selectedStyle){showToast(t('selstyle'),'reject');return;}
+  if(!selectedLine){showToast(t('selline'),'reject');return;}
+  if(actionCooldown)return;
+  // Soft warning when over cut qty — ask confirmation but allow
+  const cutQty=selectedStyle.cutQty||0;
+  // Use all-time totals from big boxes (populated from server, not today-only)
+  const allTimePass=parseInt(document.getElementById('sp').textContent)||0;
+  const allTimeAlter=parseInt(document.getElementById('sa').textContent)||0;
+  const allTimeReject=parseInt(document.getElementById('sr').textContent)||0;
+  const allTimeTotal=allTimePass+allTimeAlter+allTimeReject;
+  if(cutQty>0 && allTimeTotal>=cutQty){
+    const ok=confirm(`⚠️ Cut Qty (${cutQty}) already fully inspected (${allTimeTotal} done all time).
+
+Do you want to add more entries?
+
+Tap OK to continue, Cancel to go back.`);
+    if(!ok)return;
+  }
+  pendingAction=act;
+  actionCooldown=true;
+  ['bpass','balter','breject'].forEach(id=>document.getElementById(id).disabled=true);
+  if(act==='Pass'){
+    await saveInspection('Pass',null);
+  } else {
+    openDefect(act);
+    actionCooldown=false;
+  }
+  setTimeout(()=>{
+    actionCooldown=false;
+    if(document.getElementById('banner').style.display==='none')updateBtns();
+  },1500);
+}
+
+// ═══════════════════════════════════════════
+// SAVE
+// ═══════════════════════════════════════════
+async function saveInspection(result,defect,isRI=false,origId=null,queueId=null,pcsOvr=null){
+  document.getElementById('sdot').style.display='block';
+  const now=new Date();
+  const pcs=pcsOvr!==null?pcsOvr:pieceCount;
+  const body={
+    style_id:selectedStyle.styleId,style:selectedStyle.style,
+    color:selectedStyle.color,po:selectedStyle.po,
+    customer:selectedStyle.customer,item_type:selectedStyle.type,
+    line_name:selectedLine.lineName,floor:selectedLine.floor||'',
+    result:result,pieces_count:pcs,is_alter_reinspection:isRI,
+    inspection_datetime:now.toISOString(),
+    inspection_date:now.toISOString().split('T')[0],
+    inspection_hour:now.getHours(),session_id:sessionId,
+    cut_qty_snapshot:selectedStyle.cutQty||0,
+    checker_name:currentUser.fullName||currentUser.username,
+    checker_username:currentUser.username
+  };
+  if(defect){body.defect_name_en=defect.nameEN;body.defect_name_hi=defect.nameHI||'';body.defect_category=defect.category||'';}
+  if(origId)body.original_record_id=Number(origId)||null;
+  try{
+    const saved=await sbPost('qc_inspections',body);
+    if(result==='Alter'&&!isRI){
+      const qr=await sbPost('alter_queue',{
+        style_id:selectedStyle.styleId,style:selectedStyle.style,
+        color:selectedStyle.color,customer:selectedStyle.customer,
+        po:selectedStyle.po,item_type:selectedStyle.type,
+        line_name:selectedLine.lineName,defect_name_en:defect?defect.nameEN:'',
+        pieces_count:pcs,date_sent:now.toISOString().split('T')[0],
+        status:'Pending',checker_name:currentUser.fullName||currentUser.username,
+        ...(saved?.id?{original_inspection_id:saved.id}:{})
+      });
+      alterQueue.push({id:qr.id,styleId:selectedStyle.styleId,style:selectedStyle.style,
+        color:selectedStyle.color,lineName:selectedLine.lineName,
+        defectEN:defect?defect.nameEN:'',pieces:pcs,dateSent:now.toISOString().split('T')[0],origId:''});
+      updateQueueUI();
+    }
+    if(isRI&&queueId){
+      const status=result==='Pass'?'Re-Inspected Pass':'Re-Inspected Reject';
+      try{
+        await sbPatch('alter_queue',queueId,{
+          status:status,reinspection_datetime:now.toISOString(),
+          reinspection_result:result,reinspection_defect:defect?defect.nameEN:''
+        });
+      }catch(e){
+        try{await sbPatch('alter_queue',queueId,{status:status})}catch(e2){}
+      }
+      alterQueue=alterQueue.filter(q=>q.id!==queueId);
+      updateQueueUI();
+    }
+    document.getElementById('sdot').style.display='none';
+    const em=result==='Pass'?'✅':result==='Alter'?'🟠':'❌';
+    showToast(`${em} ${t(result==='Pass'?'lpb':result==='Alter'?'lab':'lrb')}!`,
+      result==='Pass'?'pass':result==='Alter'?'alter':'reject');
+    pieceCount=1;document.getElementById('pcsv').textContent=1;
+    await loadStats();
+    if(result==='Alter'&&!isRI)await loadAlterQueue();
+  }catch(e){
+    document.getElementById('sdot').style.display='none';
+    showToast('Save failed: '+e.message.substring(0,70),'reject');
+    console.error(e);
+  }
+}
+
+// ═══════════════════════════════════════════
+// DEFECT SHEET
+// ═══════════════════════════════════════════
+function openDefect(act){
+  selectedDefects=[];
+  document.getElementById('dsrch').value='';
+  document.getElementById('addform').style.display='none';
+  document.getElementById('bconf').disabled=true;
+  document.getElementById('bconf').onclick=confirmDef;
+  const lbl=act==='Alter'?`🟠 ${t('lab')}`:`❌ ${t('lrb')}`;
+  document.getElementById('dshtitle').textContent=t('lss').split('&')[0].trim().includes('Style')?'Select Defect':'दोष चुनें';
+  document.getElementById('dshtitle').textContent='Select Defect';
+  document.getElementById('dshsub').textContent=`${lbl}  ·  ${selectedStyle.styleId}  ·  ${pieceCount} pcs`;
+  renderDefs('');
+  document.getElementById('dov').classList.add('open');
+  document.getElementById('dsh').classList.add('open');
+}
+function closeDefect(cancelled=false){
+  document.getElementById('dov').classList.remove('open');
+  document.getElementById('dsh').classList.remove('open');
+  if(cancelled){pendingAction=null;selectedDefects=[];}
+}
+function renderDefs(q){
+  const list=document.getElementById('dlist');list.innerHTML='';
+  const fl=q.toLowerCase();
+  const cats={};
+  allDefects.filter(d=>!fl||d.nameEN.toLowerCase().includes(fl)||d.nameHI.includes(fl))
+    .forEach(d=>{if(!cats[d.category])cats[d.category]=[];cats[d.category].push(d);});
+  Object.entries(cats).forEach(([cat,defs])=>{
+    const ce=document.createElement('div');ce.className='def-cat';ce.textContent=cat;list.appendChild(ce);
+    defs.forEach(d=>{
+      const isSel=selectedDefects.some(s=>s.id===d.id);
+      const el=document.createElement('div');el.className='def-item'+(isSel?' sel':'');
+      el.innerHTML=`<div class="def-dot">${isSel?'✓':''}</div><div style="flex:1"><div class="def-name">${d.nameEN}</div>${d.nameHI?`<div class="def-hi">${d.nameHI}</div>`:''}</div>`;
+      // Touch: only select if finger barely moved (tap, not scroll)
+      let _ty=0;
+      el.addEventListener('touchstart',e=>{_ty=e.touches[0].clientY;},{passive:true});
+      el.addEventListener('touchend',e=>{
+        if(Math.abs(e.changedTouches[0].clientY-_ty)<8){e.preventDefault();toggleDef(d);}
+      });
+      el.addEventListener('click',e=>{if(!('ontouchstart' in window))toggleDef(d);});
+      list.appendChild(el);
+    });
+  });
+}
+function filterDef(){renderDefs(document.getElementById('dsrch').value);}
+function toggleDef(d){
+  const i=selectedDefects.findIndex(s=>s.id===d.id);
+  if(i>=0)selectedDefects.splice(i,1);else selectedDefects.push(d);
+  renderDefs(document.getElementById('dsrch').value);
+  const n=selectedDefects.length;
+  const btn=document.getElementById('bconf');
+  btn.disabled=n===0;
+  btn.textContent=n===0?'Confirm & Save':`Confirm & Save (${n} defect${n>1?'s':''})`;
+}
+async function confirmDef(){
+  if(!selectedDefects.length){showToast(t('seldef'),'reject');return;}
+  const act=pendingAction,pcs=pieceCount;
+  const combined={
+    nameEN:selectedDefects.map(d=>d.nameEN).join(', '),
+    nameHI:selectedDefects.map(d=>d.nameHI||d.nameEN).join(', '),
+    category:[...new Set(selectedDefects.map(d=>d.category))].join(', ')
+  };
+  closeDefect(false);pendingAction=null;selectedDefects=[];
+  await saveInspection(act,combined,false,null,null,pcs);
+}
+function togAddDef(){const f=document.getElementById('addform');f.style.display=f.style.display==='none'?'block':'none';}
+async function saveNewDef(){
+  const en=document.getElementById('nen').value.trim();
+  const hi=document.getElementById('nhi').value.trim();
+  const cat=document.getElementById('ncat').value;
+  if(!en){showToast('Enter defect name','reject');return;}
+  try{
+    const rec=await sbPost('defect_master',{name_en:en,name_hi:hi,category:cat,is_active:true,sort_order:99});
+    const nd={id:rec.id,nameEN:en,nameHI:hi,category:cat,isActive:true,sortOrder:99};
+    allDefects.push(nd);
+    document.getElementById('nen').value='';document.getElementById('nhi').value='';
+    document.getElementById('addform').style.display='none';
+    toggleDef(nd);showToast('Defect added!','pass');
+  }catch(e){showToast('Failed to add defect','reject');}
+}
+
+// ═══════════════════════════════════════════
+// ALTER QUEUE
+// ═══════════════════════════════════════════
+function updateQueueUI(){
+  const n=alterQueue.length;
+  const strip=document.getElementById('aqstrip');
+  strip.style.display=n>0?'flex':'none';
+  document.getElementById('aqct').textContent=n;
+}
+function openQueue(){renderQueue();document.getElementById('qov').classList.add('open');document.getElementById('qsh').classList.add('open');}
+function closeQueue(){document.getElementById('qov').classList.remove('open');document.getElementById('qsh').classList.remove('open');}
+function renderQueue(){
+  const body=document.getElementById('qbody');
+  if(!alterQueue.length){body.innerHTML=`<div class="empty-st"><div class="ei">✅</div>${t('noalt')}</div>`;return;}
+  body.innerHTML='';
+  alterQueue.forEach(q=>{
+    const div=document.createElement('div');div.className='q-item';
+    const dt=q.dateSent?new Date(q.dateSent).toLocaleDateString('en-IN'):'—';
+    const qpo = q.po ? `<span style="background:rgba(77,166,255,0.15);color:#4da6ff;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;margin-left:4px">${q.po}</span>` : '';
+    div.innerHTML=`<div class="q-style">${q.styleId}${qpo}</div>
+      <div class="q-meta">Line: ${q.lineName} · ${q.pieces} pcs · ${dt}</div>
+      <div class="q-defect">${q.defectEN||'—'}</div>
+      <div class="q-acts">
+        <button class="qp" onclick="reinspect('${q.id}','Pass')">✅ ${t('lpb')}</button>
+        <button class="qr" onclick="reinspect('${q.id}','Reject')">❌ ${t('lrb')}</button>
+      </div>`;
+    body.appendChild(div);
+  });
+}
+async function reinspect(qid,result){
+  const q=alterQueue.find(x=>x.id===qid);
+  if(!q){showToast('Item not found','reject');return;}
+  closeQueue();
+  const sv=selectedStyle,sl=selectedLine,sp=pieceCount;
+  selectedStyle=allOrders.find(o=>o.styleId===q.styleId)||{styleId:q.styleId,style:q.style,color:q.color,po:'',customer:'',type:'',cutQty:0,sewQty:0,finishQty:0};
+  selectedLine=allLines.find(l=>l.lineName===q.lineName)||{lineName:q.lineName,floor:''};
+  pieceCount=q.pieces;
+  if(result==='Pass'){
+    await saveInspection('Pass',null,true,q.origId,q.id);
+  } else {
+    openDefectForRI(q);
+  }
+  selectedStyle=sv;selectedLine=sl;pieceCount=sp;
+  document.getElementById('pcsv').textContent=sp;
+}
+function openDefectForRI(q){
+  selectedDefects=[];
+  document.getElementById('dsrch').value='';
+  document.getElementById('addform').style.display='none';
+  document.getElementById('bconf').disabled=true;
+  document.getElementById('dshtitle').textContent='❌ Reinspect — Select Defect';
+  document.getElementById('dshsub').textContent=`${q.styleId} · ${q.pieces} pcs`;
+  renderDefs('');
+  document.getElementById('bconf').onclick=async function(){
+    if(!selectedDefects.length){showToast(t('seldef'),'reject');return;}
+    const sv=selectedStyle,sl=selectedLine,sp=pieceCount;
+    selectedStyle=allOrders.find(o=>o.styleId===q.styleId)||{styleId:q.styleId,style:q.style,color:q.color,po:'',customer:'',type:'',cutQty:0,sewQty:0,finishQty:0};
+    selectedLine=allLines.find(l=>l.lineName===q.lineName)||{lineName:q.lineName,floor:''};
+    pieceCount=q.pieces;
+    const combined={nameEN:selectedDefects.map(d=>d.nameEN).join(', '),nameHI:selectedDefects.map(d=>d.nameHI||d.nameEN).join(', '),category:''};
+    closeDefect(false);selectedDefects=[];
+    await saveInspection('Reject',combined,true,q.origId,q.id);
+    selectedStyle=sv;selectedLine=sl;pieceCount=sp;
+    document.getElementById('pcsv').textContent=sp;
+    document.getElementById('bconf').onclick=confirmDef;
+  };
+  document.getElementById('dov').classList.add('open');
+  document.getElementById('dsh').classList.add('open');
+}
+
+// ═══════════════════════════════════════════
+// LANGUAGE
+// ═══════════════════════════════════════════
+function setLang(l){
+  lang=l;
+  document.getElementById('ben').classList.toggle('active',l==='en');
+  document.getElementById('bhi').classList.toggle('active',l==='hi');
+  applyTrans();
+  if(document.getElementById('qsh').classList.contains('open'))renderQueue();
+}
+function applyTrans(){
+  const map=[['lss','lss'],['lst','lst'],['lln','lln'],['lpcs','lpcs'],
+    ['lp','lp'],['la','la'],['lr','lr'],['lpb','lpb'],['lab','lab'],['lrb','lrb'],
+    ['lcut','lcut'],['lsew','lsew'],['lbal','lbal'],['ltp','ltp'],['ltr','ltr'],
+    ['ltoday','ltoday'],['laq','laq'],['lri','lri'],['laqt','laqt'],['laqsub','laqsub'],['ladd','ladd']];
+  map.forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.textContent=t(key);});
+  document.getElementById('dsrch').placeholder=lang==='hi'?'दोष खोजें...':'Search defect...';
+}
+
+// ═══════════════════════════════════════════
+// MANAGER — REPORT
+// ═══════════════════════════════════════════
+// ── REPORT STYLE SEARCH ──
+let rptStyleDD_hi = -1;
+let selectedRptStyle = null; // {styleId, po, color, customer}
+
+function openRptStyleDD(){
+  filterRptStyle();
+  document.getElementById('rpt-sdd').classList.add('open');
+}
+function closeRptStyleDD(){
+  document.getElementById('rpt-sdd').classList.remove('open');
+}
+function filterRptStyle(){
+  const q = document.getElementById('rpt-ssrch').value.trim().toLowerCase();
+  const dd = document.getElementById('rpt-sdd');
+  dd.innerHTML = '';
+  // Add "All Styles" option
+  const allOpt = document.createElement('div');
+  allOpt.className = 'd-item';
+  allOpt.innerHTML = '<div class="dm" style="color:var(--teal)">All Styles</div><div class="ds">Show all styles in report</div>';
+  allOpt.addEventListener('mousedown', e => { e.preventDefault(); clearRptStyle(); });
+  allOpt.addEventListener('touchend', e => { e.preventDefault(); clearRptStyle(); });
+  dd.appendChild(allOpt);
+
+  // Deduplicate by Style ID — same style in multiple POs shows once
+  const seen = new Set();
+  const unique = [];
+  allOrders.forEach(o => { if(!seen.has(o.styleId)){ seen.add(o.styleId); unique.push(o); } });
+
+  const filtered = q
+    ? unique.filter(o =>
+        o.styleId.toLowerCase().includes(q) || o.style.toLowerCase().includes(q) ||
+        o.color.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q))
+    : unique.slice(0, 80);
+
+  filtered.forEach(o => {
+    const item = document.createElement('div');
+    item.className = 'd-item';
+    const hl = q ? o.styleId.replace(new RegExp(`(${q})`,'gi'),'<mark>$1</mark>') : o.styleId;
+    item.innerHTML = `<div class="dm">${hl}</div>
+      <div class="ds">${o.color} · ${o.customer} · ${o.type||''}</div>`;
+    let ty = 0;
+    item.addEventListener('touchstart', e => { ty = e.touches[0].clientY; }, {passive:true});
+    item.addEventListener('touchend', e => { if(Math.abs(e.changedTouches[0].clientY-ty)<8){e.preventDefault();selectRptStyle(o);} });
+    item.addEventListener('mousedown', e => { e.preventDefault(); selectRptStyle(o); });
+    dd.appendChild(item);
+  });
+  if(!filtered.length && q) dd.innerHTML += '<div class="d-empty">No styles found</div>';
+  dd.classList.add('open');
+}
+function selectRptStyle(o){
+  selectedRptStyle = o;
+  document.getElementById('rpt-ssrch').value = `${o.styleId} — ${o.color}`;
+  document.getElementById('rpt-ssrch').classList.add('has-val');
+  document.getElementById('rpt-sval').value = o.styleId; // Style ID only, no PO
+  closeRptStyleDD();
+}
+function clearRptStyle(){
+  selectedRptStyle = null;
+  document.getElementById('rpt-ssrch').value = '';
+  document.getElementById('rpt-ssrch').classList.remove('has-val');
+  document.getElementById('rpt-sval').value = '';
+  closeRptStyleDD();
+}
+function rptStyleKey(e){
+  if(e.key==='Escape') closeRptStyleDD();
+  else if(e.key==='Backspace' && !document.getElementById('rpt-ssrch').value) clearRptStyle();
+}
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('rpt-swrap');
+  if(wrap && !wrap.contains(e.target)) closeRptStyleDD();
+});
+
+function initManagerFilters(){
+  const today=new Date().toISOString().split('T')[0];
+  const monthAgo=new Date(Date.now()-30*24*60*60*1000).toISOString().split('T')[0];
+  document.getElementById('fdt1').value=monthAgo;
+  document.getElementById('fdt2').value=today;
+  // Warn if date range > 90 days (performance)
+  document.getElementById('fdt1').addEventListener('change', checkDateRange);
+  document.getElementById('fdt2').addEventListener('change', checkDateRange);
+  const fline=document.getElementById('fline');
+  allLines.forEach(l=>{const o=document.createElement('option');o.value=l.lineName;o.textContent=l.lineName+' · '+l.floor;fline.appendChild(o);});
+}
+
+async function loadReport(){
+  const d1=document.getElementById('fdt1').value;
+  const d2=document.getElementById('fdt2').value;
+  const fline=document.getElementById('fline').value;
+  const fcust=document.getElementById('fcust').value;
+  showLoad('Loading report...');
+  try{
+    const d1iso=d1+'T00:00:00.000Z';
+    const d2iso=d2+'T23:59:59.000Z';
+    const fstyle=document.getElementById('rpt-sval').value;
+    let qcPath=`qc_inspections?inspection_datetime=gte.${d1iso}&inspection_datetime=lte.${d2iso}`;
+    qcPath+=`&select=style_id,style,color,po,customer,item_type,line_name,result,pieces_count,is_alter_reinspection,inspection_date,inspection_datetime,defect_name_en,defect_category,cut_qty_snapshot`;
+    if(fline)  qcPath+=`&line_name=eq.${encodeURIComponent(fline)}`;
+    if(fcust)  qcPath+=`&customer=eq.${encodeURIComponent(fcust)}`;
+    if(fstyle) qcPath+=`&style_id=eq.${encodeURIComponent(fstyle)}`;
+    const aqPath=`alter_queue?select=style_id,line_name,status,pieces_count,date_sent,reinspection_datetime,tat_hours,defect_name_en,customer`;
+    const [qcRows,aqRows]=await Promise.all([sbGet(qcPath),sbGet(aqPath)]);
+    // Wrap into Airtable-compatible shape so all downstream functions work unchanged
+    const qcRecs=qcRows.map(r=>({fields:{
+      'Style ID':r.style_id,'Style':r.style,'Color':r.color,'PO':r.po,
+      'Customer':r.customer,'Item Type':r.item_type,'Line Name':r.line_name,
+      'Result':r.result,'Pieces Count':r.pieces_count,
+      'Is Alter Reinspection':r.is_alter_reinspection,
+      'Inspection Date':r.inspection_date,'Inspection DateTime':r.inspection_datetime,
+      'Defect Name EN':r.defect_name_en,'Defect Category':r.defect_category,
+      'Cut Qty Snapshot':r.cut_qty_snapshot
+    }}));
+    const aqRecs=aqRows.map(r=>({fields:{
+      'Style ID':r.style_id,'Line Name':r.line_name,'Status':r.status,
+      'Pieces Count':r.pieces_count,'Date Sent to Alter':r.date_sent,
+      'Reinspection DateTime':r.reinspection_datetime,'TAT Hours':r.tat_hours,
+      'Defect Name EN':r.defect_name_en,'Customer':r.customer
+    }}));
+    reportData=qcRecs;reportAlter=aqRecs;
+
+    // Populate customer filter
+    const custs=[...new Set(qcRecs.map(r=>r.fields['Customer']).filter(Boolean))].sort();
+    const fc=document.getElementById('fcust');
+    const cur=fc.value;fc.innerHTML='<option value="">All Customers</option>';
+    custs.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;if(c===cur)o.selected=true;fc.appendChild(o);});
+
+    buildSummary(qcRecs,aqRecs);
+    buildStyleTable(qcRecs);
+    buildLineTable(qcRecs);
+    buildDefectChart(qcRecs);
+    buildAlterTable(aqRecs);
+    hideLoad();
+  }catch(e){hideLoad();showToast('Report error: '+e.message,'reject');console.error(e);}
+}
+
+function calcMetrics(recs){
+  let pass=0,alter=0,reject=0,rp=0,rr=0;
+  recs.forEach(r=>{
+    const pcs=r.fields['Pieces Count']||0;if(!pcs)return;
+    const res=r.fields['Result']||'';
+    const isRI=!!(r.fields['Is Alter Reinspection']);
+    if(!isRI){if(res==='Pass')pass+=pcs;else if(res==='Alter')alter+=pcs;else if(res==='Reject')reject+=pcs;}
+    else{if(res==='Pass')rp+=pcs;else if(res==='Reject')rr+=pcs;}
+  });
+  const total=pass+alter+reject;
+  const dhu=total>0?(((alter+reject)/total)*100):0;
+  const altPassRate=alter>0?((rp/alter)*100):0;
+  return{pass,alter,reject,rp,rr,total,dhu,altPassRate,tpass:pass+rp,treject:reject+rr};
+}
+
+function buildSummary(qcRecs,aqRecs){
+  const m=calcMetrics(qcRecs);
+  // All-time Re-Pass from Alter Queue (independent of date filter)
+  const aqRepass=aqRecs.filter(r=>(r.fields['Status']||'').includes('Pass')).length;
+  // Alter Pass Rate = all-time Re-Pass ÷ all-time Alter (from QC — date filtered)
+  // Use m.alter for date range, but re-pass from full alter queue
+  const altPassRate = m.alter>0 ? (aqRepass/m.alter*100) : 0;
+  document.getElementById('ms-insp').textContent=m.total;
+  document.getElementById('ms-pass').textContent=m.pass;
+  document.getElementById('ms-alt').textContent=m.alter;
+  document.getElementById('ms-rej').textContent=m.reject;
+  document.getElementById('ms-dhu').textContent=m.total>0?m.dhu.toFixed(1)+'%':'—';
+  document.getElementById('ms-ar').textContent=m.alter>0?altPassRate.toFixed(0)+'%':'—';
+}
+
+function buildStyleTable(recs){
+  // Group by style
+  const map={};
+  recs.forEach(r=>{
+    const sid=r.fields['Style ID']||'';if(!sid)return;
+    const po=r.fields['PO']||'';
+    const key=sid+'|||'+po;
+    if(!map[key])map[key]={styleId:sid,po:po,customer:r.fields['Customer']||'',
+      type:r.fields['Item Type']||'',cutSnaps:{},cutQty:0,recs:[]};
+    // Track all cut qty snapshots to find most common (mode)
+    const snap=r.fields['Cut Qty Snapshot']||0;
+    if(snap>0) map[key].cutSnaps[snap]=(map[key].cutSnaps[snap]||0)+1;
+    map[key].recs.push(r);
+  });
+  // Resolve cutQty as mode (most frequent snapshot value)
+  Object.values(map).forEach(s=>{
+    const snaps=s.cutSnaps;
+    const keys=Object.keys(snaps);
+    if(keys.length>0){
+      s.cutQty=Number(keys.reduce((a,b)=>snaps[a]>=snaps[b]?a:b));
+    }
+    delete s.cutSnaps;
+  });
+  const rows=Object.values(map).map(s=>({...s,...calcMetrics(s.recs)}));
+  rows.sort((a,b)=>b.dhu-a.dhu);
+  const maxDHU=Math.max(...rows.map(r=>r.dhu),1);
+  const tbody=document.getElementById('tbody-style');tbody.innerHTML='';
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--t2);padding:20px">No data for selected period</td></tr>';return;}
+  rows.forEach(r=>{
+    const pct=Math.min((r.dhu/maxDHU)*100,100);
+    const cls=r.dhu<10?'good':r.dhu>25?'bad':'';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="font-weight:600">${r.styleId}</td>
+      <td><span style="background:rgba(77,166,255,0.15);color:#4da6ff;border-radius:4px;padding:2px 7px;font-size:12px;font-weight:700">${r.po||'—'}</span></td>
+      <td style="color:var(--t2)">${r.customer}</td>
+      <td style="color:var(--t2)">${r.type}</td>
+      <td class="td-num">${r.cutQty}</td>
+      <td class="td-num">${r.total}</td>
+      <td class="td-num td-pass">${r.pass}</td>
+      <td class="td-num td-alt">${r.alter}</td>
+      <td class="td-num td-rej">${r.reject}</td>
+      <td class="td-num" style="color:var(--grn)">${r.rp}</td>
+      <td class="td-num" style="color:var(--grn)">${r.tpass}</td>
+      <td class="td-num" style="color:var(--red)">${r.treject}</td>
+      <td><div class="dhu-bar"><div class="dhu-track"><div class="dhu-fill ${cls}" style="width:${pct}%"></div></div><span class="td-dhu" style="min-width:48px">${r.dhu.toFixed(1)}%</span></div></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildLineTable(recs){
+  const map={};
+  recs.forEach(r=>{
+    const ln=r.fields['Line Name']||'';if(!ln)return;
+    if(!map[ln]){const lo=allLines.find(l=>l.lineName===ln)||{};
+      map[ln]={lineName:ln,floor:lo.floor||'',recs:[]};}
+    map[ln].recs.push(r);
+  });
+  const rows=Object.values(map).map(s=>({...s,...calcMetrics(s.recs)}));
+  rows.sort((a,b)=>a.dhu-b.dhu);
+  const tbody=document.getElementById('tbody-line');tbody.innerHTML='';
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--t2);padding:20px">No data</td></tr>';return;}
+  rows.forEach((r,i)=>{
+    const rank=i+1;
+    const rc=rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-n';
+    const cls=r.dhu<10?'good':r.dhu>25?'bad':'';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><span class="rank-badge ${rc}">${rank}</span></td>
+      <td style="font-weight:600">${r.lineName}</td>
+      <td style="color:var(--t2)">${r.floor}</td>
+      <td class="td-num">${r.total}</td>
+      <td class="td-num td-pass">${r.pass}</td>
+      <td class="td-num td-alt">${r.alter}</td>
+      <td class="td-num td-rej">${r.reject}</td>
+      <td><div class="dhu-bar"><div class="dhu-track"><div class="dhu-fill ${cls}" style="width:${Math.min((r.dhu/Math.max(...rows.map(x=>x.dhu),1))*100,100)}%"></div></div><span class="td-dhu" style="min-width:48px">${r.dhu.toFixed(1)}%</span></div></td>
+      <td class="td-num" style="color:var(--pur)">${r.alter>0?r.altPassRate.toFixed(0)+'%':'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildDefectChart(recs){
+  // Count defects from Defect Name EN field
+  const map={};
+  recs.forEach(r=>{
+    const pcs=r.fields['Pieces Count']||0;if(!pcs)return;
+    const isRI=!!(r.fields['Is Alter Reinspection']);if(isRI)return;
+    const res=r.fields['Result']||'';if(res==='Pass')return;
+    const defStr=r.fields['Defect Name EN']||'';
+    defStr.split(',').map(d=>d.trim()).filter(Boolean).forEach(d=>{
+      map[d]=(map[d]||0)+pcs;
+    });
+  });
+  const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  const total=sorted.reduce((s,[,v])=>s+v,0);
+  const maxV=sorted[0]?sorted[0][1]:1;
+
+  // Chart
+  const chart=document.getElementById('defect-chart');chart.innerHTML='';
+  sorted.forEach(([name,ct])=>{
+    const pct=(ct/maxV)*100;
+    const div=document.createElement('div');div.className='def-bar-row';
+    div.innerHTML=`<div class="def-bar-name" title="${name}">${name}</div>
+      <div class="def-bar-track"><div class="def-bar-fill" style="width:${pct}%"></div></div>
+      <div class="def-bar-ct">${ct}</div>`;
+    chart.appendChild(div);
+  });
+
+  // Table
+  const tbody=document.getElementById('tbody-defect');tbody.innerHTML='';
+  if(!sorted.length){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--t2);padding:20px">No defect data</td></tr>';return;}
+  sorted.forEach(([name,ct])=>{
+    const pct=total>0?((ct/total)*100).toFixed(1):0;
+    const cat=allDefects.find(d=>d.nameEN===name)?.category||'—';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="font-weight:600">${name}</td><td style="color:var(--t2)">${cat}</td>
+      <td class="td-num td-alt">${ct}</td><td class="td-num" style="color:var(--t2)">${pct}%</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildAlterTable(recs){
+  const tbody=document.getElementById('tbody-alter');tbody.innerHTML='';
+  let total=0,rpass=0,rrej=0,pend=0;
+  recs.forEach(r=>{
+    const st=r.fields['Status']||'';total++;
+    if(st==='Re-Inspected Pass')rpass++;
+    else if(st==='Re-Inspected Reject')rrej++;
+    else if(st==='Pending')pend++;
+  });
+  document.getElementById('tat-total').textContent=total;
+  document.getElementById('tat-pass').textContent=rpass;
+  document.getElementById('tat-rej').textContent=rrej;
+  document.getElementById('tat-pend').textContent=pend;
+
+  const sorted=[...recs].sort((a,b)=>new Date(b.fields['Date Sent to Alter']||0)-new Date(a.fields['Date Sent to Alter']||0));
+  if(!sorted.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--t2);padding:20px">No alter data</td></tr>';return;}
+  sorted.forEach(r=>{
+    const f=r.fields;
+    const st=f['Status']||'Pending';
+    const stcls=st==='Re-Inspected Pass'?'td-pass':st==='Re-Inspected Reject'?'td-rej':'td-alt';
+    const tat=f['TAT Hours']?Number(f['TAT Hours']).toFixed(1)+'h':'—';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="font-weight:600">${f['Style ID']||''}</td>
+      <td style="color:var(--t2)">${f['Line Name']||''}</td>
+      <td>${f['Defect Name EN']||''}</td>
+      <td class="td-num">${f['Pieces Count']||1}</td>
+      <td style="color:var(--t2)">${f['Date Sent to Alter']||''}</td>
+      <td class="${stcls}">${st}</td>
+      <td class="td-num">${tat}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function checkDateRange(){
+  const d1=new Date(document.getElementById('fdt1').value);
+  const d2=new Date(document.getElementById('fdt2').value);
+  const days=Math.round((d2-d1)/(1000*60*60*24));
+  const warn=document.getElementById('date-range-warn');
+  if(days>90){
+    if(!warn){
+      const el=document.createElement('div');
+      el.id='date-range-warn';
+      el.style.cssText='background:#fef3c7;border:1px solid #d97706;border-radius:8px;padding:8px 14px;font-size:13px;color:#78350f;margin-bottom:12px';
+      el.innerHTML='⚠️ Date range is '+days+' days. Large ranges may load slowly. Consider narrowing to under 90 days for best performance.';
+      document.querySelector('.mgr-main').insertBefore(el,document.querySelector('.sum-grid'));
+    } else {
+      warn.innerHTML='⚠️ Date range is '+days+' days. Large ranges may load slowly. Consider narrowing to under 90 days for best performance.';
+    }
+  } else {
+    if(warn) warn.remove();
+  }
+}
+
+function showTab(name){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  const tabs={style:0,line:1,defect:2,alter:3};
+  document.querySelectorAll('.mtab')[tabs[name]].classList.add('active');
+}
+
+function exportCSV(){
+  if(!reportData.length){showToast('No data to export','reject');return;}
+  const headers=['Style ID','Customer','Line Name','Result','Pieces Count','Is Alter Reinspection','Defect Name EN','Inspection Date','Checker Name'];
+  const rows=reportData.map(r=>{
+    const f=r.fields;
+    return headers.map(h=>{
+      const v=f[h]||'';
+      return typeof v==='string'&&v.includes(',')? `"${v}"`:v;
+    }).join(',');
+  });
+  const csv=[headers.join(','),...rows].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`sewlytics-report-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();URL.revokeObjectURL(url);
+  showToast('CSV exported!','pass');
+}
+
+// ═══════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════
+function showLoad(msg){
+  document.getElementById('loading').classList.remove('hidden');
+  document.getElementById('load-txt').textContent=msg||'...';
+}
+function hideLoad(){document.getElementById('loading').classList.add('hidden');}
+function showToast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast '+type;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2500);
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW failed:', err));
+  });
+}
+
+// PWA Install prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Show install banner after 3 seconds if not already installed
+  setTimeout(() => {
+    if (deferredPrompt && !window.matchMedia('(display-mode: standalone)').matches) {
+      showInstallBanner();
+    }
+  }, 3000);
+});
+
+function showInstallBanner() {
+  const banner = document.createElement('div');
+  banner.id = 'install-banner';
+  banner.style.cssText = `
+    position:fixed;bottom:0;left:0;right:0;z-index:9999;
+    background:#161920;border-top:1px solid #00e5a0;
+    padding:14px 16px;display:flex;align-items:center;gap:12px;
+    font-family:'Rajdhani',sans-serif;
+  `;
+  banner.innerHTML = `
+    <img src="/icons/icon-192.png" style="width:40px;height:40px;border-radius:8px;">
+    <div style="flex:1">
+      <div style="font-size:15px;font-weight:700;color:#e8eaf0">Install Sewlytics</div>
+      <div style="font-size:12px;color:#8892a4">Add to home screen for quick access</div>
+    </div>
+    <button onclick="installApp()" style="background:#00e5a0;color:#000;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;padding:10px 16px;cursor:pointer;">Install</button>
+    <button onclick="document.getElementById('install-banner').remove()" style="background:none;border:none;color:#8892a4;font-size:20px;cursor:pointer;padding:4px 8px;">×</button>
+  `;
+  document.body.appendChild(banner);
+}
+
+async function installApp() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const result = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  const banner = document.getElementById('install-banner');
+  if (banner) banner.remove();
+}
+
+window.addEventListener('appinstalled', () => {
+  console.log('Sewlytics installed!');
+  deferredPrompt = null;
+});
+</script>
+</body>
+</html>
