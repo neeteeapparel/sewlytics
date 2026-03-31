@@ -15,7 +15,8 @@ for (const [k, v] of Object.entries({ AIRTABLE_TOKEN, AIRTABLE_BASE, SUPABASE_UR
   if (!v) { console.error(`Missing env var: ${k}`); process.exit(1); }
 }
 
-const ORDERS_VIEW = 'Sewlytics_Sync';
+const ORDERS_TABLE = 'Styles In Process';
+const ORDERS_VIEW  = 'Sewlytics_Sync';
 
 // ── Airtable helpers ─────────────────────────────────────────────────────────
 
@@ -63,7 +64,7 @@ async function sbUpsert(table, rows) {
 // ── Sync ──────────────────────────────────────────────────────────────────────
 
 async function syncOrders() {
-  const recs = await atFetch('Orders', ORDERS_VIEW);
+  const recs = await atFetch(ORDERS_TABLE, ORDERS_VIEW);
   const now  = new Date().toISOString();
 
   const rows = recs
