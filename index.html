@@ -677,9 +677,22 @@ const t=k=>(T[lang]&&T[lang][k])||T.en[k]||k;
 // ═══════════════════════════════════════════
 const _sbH=()=>({apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`});
 async function sbGet(path){
-  const res=await fetch(`${SB_URL}/rest/v1/${path}`,{headers:_sbH()});
-  if(!res.ok) throw new Error(`SB ${res.status}`);
-  return res.json();
+  // Paginate to fetch ALL rows (Supabase default cap is 1000)
+  const all=[];
+  const PAGE=1000;
+  let from=0;
+  while(true){
+    const res=await fetch(`${SB_URL}/rest/v1/${path}`,{
+      headers:{..._sbH(),Range:`${from}-${from+PAGE-1}`,'Range-Unit':'items',Prefer:'count=none'}
+    });
+    if(!res.ok) throw new Error(`SB ${res.status}`);
+    const chunk=await res.json();
+    if(!Array.isArray(chunk)||chunk.length===0) break;
+    all.push(...chunk);
+    if(chunk.length<PAGE) break;   // last page
+    from+=PAGE;
+  }
+  return all;
 }
 async function sbPost(table,body){
   const res=await fetch(`${SB_URL}/rest/v1/${table}`,{
