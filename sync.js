@@ -81,7 +81,9 @@ async function syncOrders() {
       cut_qty:     r.fields['Q Cut']               || 0,
       sew_qty:     r.fields['Q Sew']               || 0,
       finish_qty:  r.fields['Q Finish']            || 0,
-      lines_raw:   r.fields['Line from Cut Issue'] || '',
+      lines_raw:   Array.isArray(r.fields['Line from Cut Issue'])
+        ? r.fields['Line from Cut Issue'].join(', ')
+        : r.fields['Line from Cut Issue'] || '',
       synced_at:   now,
     }))
     .filter(o => o.style_id);

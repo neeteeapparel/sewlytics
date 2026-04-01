@@ -916,7 +916,8 @@ function onStyleSelected(){
   const lsel=document.getElementById('lsel');
   lsel.innerHTML='<option value="">— Line —</option>';
   if(!selectedStyle){updateBtns();return;}
-  const sl=selectedStyle.linesRaw.split(',').map(s=>s.trim()).filter(Boolean);
+  const _lr=selectedStyle.linesRaw||'';
+  const sl=(_lr.trim().startsWith('[')?JSON.parse(_lr):_lr.split(',')).map(s=>s.trim()).filter(Boolean);
   const lines=[...new Set(sl.length?sl:allLines.map(l=>l.lineName))];
   lines.forEach(ln=>{
     const lo=allLines.find(l=>l.lineName===ln);

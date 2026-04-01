@@ -55,6 +55,17 @@ function parseCSV(filePath) {
 
 // ── Supabase helpers ──────────────────────────────────────────────────────────
 
+async function clearTable(table) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=gte.0`, {
+    method: 'DELETE',
+    headers: HDR,
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`[${table}] clear failed: ${res.status} ${body}`);
+  }
+}
+
 async function upsert(table, rows, conflictCol = '') {
   if (!rows.length) return;
   const url = conflictCol
@@ -224,24 +235,30 @@ function toAlterQueue(rows) {
     console.log('  ✓');
 
     // 3. QC Inspections from CSV
-    const qcFile = path.join(dir, 'QC Inspections-Grid view (2).csv');
+    const qcFile = path.join(dir, 'QC Inspections-Grid view.csv');
     if (!fs.existsSync(qcFile)) {
       console.warn('⚠  QC Inspections CSV not found — skipping. Copy file to project folder.');
     } else {
       const qcCSV  = parseCSV(qcFile);
       const qcRows = toQCInspections(qcCSV);
+      process.stdout.write(`Clearing old qc_inspections...  `);
+      await clearTable('qc_inspections');
+      console.log('✓');
       process.stdout.write(`Inserting qc_inspections (${qcRows.length} records)  `);
       await upsert('qc_inspections', qcRows);
       console.log(`  ✓`);
     }
 
     // 4. Alter Queue from CSV
-    const aqFile = path.join(dir, 'Alter Queue-Grid view (2).csv');
+    const aqFile = path.join(dir, 'Alter Queue-Grid view.csv');
     if (!fs.existsSync(aqFile)) {
       console.warn('⚠  Alter Queue CSV not found — skipping. Copy file to project folder.');
     } else {
       const aqCSV  = parseCSV(aqFile);
       const aqRows = toAlterQueue(aqCSV);
+      process.stdout.write(`Clearing old alter_queue...  `);
+      await clearTable('alter_queue');
+      console.log('✓');
       process.stdout.write(`Inserting alter_queue (${aqRows.length} records)  `);
       await upsert('alter_queue', aqRows);
       console.log(`  ✓`);
