@@ -677,10 +677,9 @@ const t=k=>(T[lang]&&T[lang][k])||T.en[k]||k;
 // ═══════════════════════════════════════════
 const _sbH=()=>({apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`});
 async function sbGet(path){
-  // Request up to 10 000 rows in one call (bypass Supabase 1000-row default)
-  const res=await fetch(`${SB_URL}/rest/v1/${path}`,{
-    headers:{..._sbH(),Range:'0-9999','Range-Unit':'items'}
-  });
+  // Append limit=10000 to bypass Supabase default 1000-row cap
+  const sep=path.includes('?')?'&':'?';
+  const res=await fetch(`${SB_URL}/rest/v1/${path}${sep}limit=10000`,{headers:_sbH()});
   if(!res.ok) throw new Error(`SB ${res.status}`);
   return res.json();
 }
@@ -795,8 +794,8 @@ async function initApp(){
 // DATA LOAD
 // ═══════════════════════════════════════════
 async function loadOrders(){
-  const res=await fetch(`${SB_URL}/rest/v1/orders?select=*&order=style_id.asc`,{
-    headers:{apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`,Range:'0-9999','Range-Unit':'items'}
+  const res=await fetch(`${SB_URL}/rest/v1/orders?select=*&order=style_id.asc&limit=10000`,{
+    headers:{apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`}
   });
   if(!res.ok) throw new Error(`SB orders ${res.status}`);
   const recs=await res.json();
