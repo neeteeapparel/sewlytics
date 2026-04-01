@@ -810,12 +810,16 @@ async function loadOrders(){
   })).filter(o=>o.styleId);
 }
 async function loadLines(){
+  // No Range header — 28 lines, well within default 1000-row limit
   const res=await fetch(`${SB_URL}/rest/v1/lines?select=*&order=line_name.asc`,{
-    headers:{apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`,Range:'0-999','Range-Unit':'items'}
+    headers:{apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`}
   });
-  if(!res.ok) throw new Error(`SB lines ${res.status}: failed to load lines`);
+  if(!res.ok) throw new Error(`SB lines ${res.status}`);
   const recs=await res.json();
-  if(!Array.isArray(recs)||recs.length===0) console.warn('loadLines: no lines returned from Supabase');
+  if(!Array.isArray(recs)||recs.length===0){
+    showToast('⚠️ Lines table empty — check Supabase','reject');
+    console.warn('loadLines: Supabase returned no lines');
+  }
   allLines=recs.map(r=>({
     id:String(r.id),lineName:r.line_name||'',floor:r.floor||'',
     contractor:r.contractor||'',abbr:r.abbr||''
@@ -1281,7 +1285,8 @@ async function saveNewDef(){
 function updateQueueUI(){
   const n=alterQueue.length;
   const strip=document.getElementById('aqstrip');
-  strip.style.display=n>0?'flex':'none';
+  // Only show alter strip when a style AND line are selected
+  strip.style.display=(n>0&&selectedStyle&&selectedLine)?'flex':'none';
   document.getElementById('aqct').textContent=n;
 }
 function openQueue(){renderQueue();document.getElementById('qov').classList.add('open');document.getElementById('qsh').classList.add('open');}
@@ -1443,8 +1448,8 @@ document.addEventListener('click', e => {
 
 function initManagerFilters(){
   const today=new Date().toISOString().split('T')[0];
-  const monthAgo=new Date(Date.now()-30*24*60*60*1000).toISOString().split('T')[0];
-  document.getElementById('fdt1').value=monthAgo;
+  const sixMonthsAgo=new Date(Date.now()-180*24*60*60*1000).toISOString().split('T')[0];
+  document.getElementById('fdt1').value=sixMonthsAgo;
   document.getElementById('fdt2').value=today;
   // Warn if date range > 90 days (performance)
   document.getElementById('fdt1').addEventListener('change', checkDateRange);
