@@ -1431,6 +1431,7 @@ function selectRptStyle(o){
   document.getElementById('rpt-ssrch').classList.add('has-val');
   document.getElementById('rpt-sval').value = o.styleId; // Style ID only, no PO
   closeRptStyleDD();
+  loadReport(); // auto-refresh when style selected
 }
 function clearRptStyle(){
   selectedRptStyle = null;
@@ -1438,6 +1439,7 @@ function clearRptStyle(){
   document.getElementById('rpt-ssrch').classList.remove('has-val');
   document.getElementById('rpt-sval').value = '';
   closeRptStyleDD();
+  loadReport(); // auto-refresh when style cleared
 }
 function rptStyleKey(e){
   if(e.key==='Escape') closeRptStyleDD();
