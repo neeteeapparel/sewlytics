@@ -677,22 +677,12 @@ const t=k=>(T[lang]&&T[lang][k])||T.en[k]||k;
 // ═══════════════════════════════════════════
 const _sbH=()=>({apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`});
 async function sbGet(path){
-  // Paginate to fetch ALL rows (Supabase default cap is 1000)
-  const all=[];
-  const PAGE=1000;
-  let from=0;
-  while(true){
-    const res=await fetch(`${SB_URL}/rest/v1/${path}`,{
-      headers:{..._sbH(),Range:`${from}-${from+PAGE-1}`,'Range-Unit':'items',Prefer:'count=none'}
-    });
-    if(!res.ok) throw new Error(`SB ${res.status}`);
-    const chunk=await res.json();
-    if(!Array.isArray(chunk)||chunk.length===0) break;
-    all.push(...chunk);
-    if(chunk.length<PAGE) break;   // last page
-    from+=PAGE;
-  }
-  return all;
+  // Request up to 10 000 rows in one call (bypass Supabase 1000-row default)
+  const res=await fetch(`${SB_URL}/rest/v1/${path}`,{
+    headers:{..._sbH(),Range:'0-9999','Range-Unit':'items'}
+  });
+  if(!res.ok) throw new Error(`SB ${res.status}`);
+  return res.json();
 }
 async function sbPost(table,body){
   const res=await fetch(`${SB_URL}/rest/v1/${table}`,{
@@ -806,7 +796,7 @@ async function initApp(){
 // ═══════════════════════════════════════════
 async function loadOrders(){
   const res=await fetch(`${SB_URL}/rest/v1/orders?select=*&order=style_id.asc`,{
-    headers:{apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`}
+    headers:{apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`,Range:'0-9999','Range-Unit':'items'}
   });
   if(!res.ok) throw new Error(`SB orders ${res.status}`);
   const recs=await res.json();
@@ -821,10 +811,11 @@ async function loadOrders(){
 }
 async function loadLines(){
   const res=await fetch(`${SB_URL}/rest/v1/lines?select=*&order=line_name.asc`,{
-    headers:{apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`}
+    headers:{apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`,Range:'0-999','Range-Unit':'items'}
   });
-  if(!res.ok) throw new Error(`SB lines ${res.status}`);
+  if(!res.ok) throw new Error(`SB lines ${res.status}: failed to load lines`);
   const recs=await res.json();
+  if(!Array.isArray(recs)||recs.length===0) console.warn('loadLines: no lines returned from Supabase');
   allLines=recs.map(r=>({
     id:String(r.id),lineName:r.line_name||'',floor:r.floor||'',
     contractor:r.contractor||'',abbr:r.abbr||''
