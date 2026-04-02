@@ -1327,7 +1327,7 @@ function renderQueue(){
   });
 }
 async function reinspect(qid,result){
-  const q=alterQueue.find(x=>x.id===qid);
+  const q=alterQueue.find(x=>String(x.id)===String(qid));
   if(!q){showToast('Item not found','reject');return;}
   closeQueue();
   const sv=selectedStyle,sl=selectedLine,sp=pieceCount;
