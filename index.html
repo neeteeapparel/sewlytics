@@ -928,7 +928,6 @@ function onStyleSelected(){
   try{sl=(_lr.trim().startsWith('[')?JSON.parse(_lr):_lr.split(',')).map(s=>s.trim()).filter(Boolean);}
   catch(e){console.warn('linesRaw parse error:',_lr,e);sl=[];}
   const lines=[...new Set(sl.length?sl:allLines.map(l=>l.lineName))];
-  console.log('onStyleSelected: linesRaw=',_lr,'sl=',sl,'allLines=',allLines.length,'lines=',lines);
   lines.forEach(ln=>{
     const lo=allLines.find(l=>l.lineName===ln);
     const opt=document.createElement('option');
