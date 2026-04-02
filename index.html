@@ -1031,43 +1031,26 @@ async function loadStats(){
   const bal = cutQty > 0 ? Math.max(0, cutQty - total) : '—';
 
   // Big boxes = ALL TIME, detail panel = TODAY
-  document.getElementById('sp').textContent    = pass;
-  document.getElementById('sa').textContent    = alter;
-  document.getElementById('sr').textContent    = reject;
-  document.getElementById('sp-all').textContent= '';
-  document.getElementById('sa-all').textContent= '';
-  document.getElementById('sr-all').textContent= '';
-  document.getElementById('dhub').textContent  = dhuAll!=='—'?dhuAll+'%':'—';
-  document.getElementById('dhu-all').textContent= '';
-  document.getElementById('dhup').textContent  = dhuAll!=='—'?dhuAll+'%':'—';
-  // Today section in detail panel
-  document.getElementById('td-pass').textContent  = passToday;
-  document.getElementById('td-alter').textContent = alterToday;
-  document.getElementById('td-reject').textContent= rejectToday;
-  document.getElementById('td-dhu').textContent   = totalToday>0?dhuToday+'%':'—';
-  document.getElementById('stod').textContent     = `${passToday}/${alterToday}/${rejectToday}`;
-  document.getElementById('drp').textContent=rp;
-  document.getElementById('drr').textContent=rr;
-  document.getElementById('dtp').textContent=tpass;
-  document.getElementById('dtr').textContent=treject;
-  document.getElementById('sbal').textContent = bal;
-  // Label and tooltip explain the formula
-  const balLbl = document.getElementById('lbal');
-  if(balLbl) balLbl.textContent = lang==='hi' ? 'जांच बाकी' : 'Balance';
-  // Tooltip shows formula breakdown
-  const balEl = document.getElementById('sbal');
-  if(balEl && cutQty > 0) {
-    balEl.title = `Cut(${cutQty}) − Inspected(${total}) = ${bal}`;
-  }
-
+  const _set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  _set('sp',pass);_set('sa',alter);_set('sr',reject);
+  _set('sp-all','');_set('sa-all','');_set('sr-all','');_set('dhu-all','');
+  _set('dhub',dhuAll!=='—'?dhuAll+'%':'—');_set('dhup',dhuAll!=='—'?dhuAll+'%':'—');
+  _set('td-pass',passToday);_set('td-alter',alterToday);_set('td-reject',rejectToday);
+  _set('td-dhu',totalToday>0?dhuToday+'%':'—');
+  _set('stod',`${passToday}/${alterToday}/${rejectToday}`);
+  _set('drp',rp);_set('drr',rr);_set('dtp',tpass);_set('dtr',treject);
+  _set('sbal',bal);
+  const balLbl=document.getElementById('lbal');
+  if(balLbl)balLbl.textContent=lang==='hi'?'जांच बाकी':'Balance';
+  const balEl=document.getElementById('sbal');
+  if(balEl&&cutQty>0)balEl.title=`Cut(${cutQty}) − Inspected(${total}) = ${bal}`;
   const banner=document.getElementById('banner');
-  const balNum=typeof bal==='number'?bal:(parseInt(bal)||0);
   const overCut=cutQty>0&&total>=cutQty;
-  if(overCut){
-    banner.style.display='block';
-    banner.textContent=`⚠️ All ${cutQty} cut pieces inspected (${total} done). You can still add more if needed.`;
-    updateBtns();
-  } else {banner.style.display='none';updateBtns();}
+  if(banner){
+    if(overCut){banner.style.display='block';banner.textContent=`⚠️ All ${cutQty} cut pieces inspected (${total} done). You can still add more if needed.`;}
+    else banner.style.display='none';
+  }
+  updateBtns();
 }
 
 function refreshScreen(){
@@ -1086,17 +1069,13 @@ function clearSelection(){
   document.getElementById('ssrch').classList.remove('has-val');
   document.getElementById('sval').value='';
   document.getElementById('lsel').innerHTML='<option value="">— Line —</option>';
-  document.getElementById('pcsv').textContent=1;
-  document.getElementById('dhup').textContent='—';
-  document.getElementById('dhub').textContent='—';
-  ['sp','sa','sr'].forEach(id=>document.getElementById(id).textContent='0');
-  ['drp','drr','dtp','dtr'].forEach(id=>document.getElementById(id).textContent='0');
-  document.getElementById('stod').textContent='0 / 0 / 0';
-  document.getElementById('scut').textContent='—';
-  document.getElementById('ssew').textContent='—';
-  document.getElementById('sbal').textContent='—';
-  document.getElementById('banner').style.display='none';
-  document.getElementById('aqstrip').style.display='none';
+  const _sc=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  _sc('pcsv',1);_sc('dhup','—');_sc('dhub','—');
+  ['sp','sa','sr'].forEach(id=>_sc(id,'0'));
+  ['drp','drr','dtp','dtr'].forEach(id=>_sc(id,'0'));
+  _sc('stod','0 / 0 / 0');_sc('scut','—');_sc('ssew','—');_sc('sbal','—');
+  const _ban=document.getElementById('banner');if(_ban)_ban.style.display='none';
+  const _aq=document.getElementById('aqstrip');if(_aq)_aq.style.display='none';
   updateBtns();
 }
 
