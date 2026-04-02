@@ -960,13 +960,13 @@ function resetStats(){
   ['sp-all','sa-all','sr-all','dhu-all'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='';});
   ['td-pass','td-alter','td-reject','td-dhu'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='…';});
   ['drp','drr','dtp','dtr'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='…';});
-  document.getElementById('stod').textContent='…';
-  document.getElementById('sbal').textContent='…';
-  document.getElementById('banner').style.display='none';
+  const _stod=document.getElementById('stod');if(_stod)_stod.textContent='…';
+  const _sbal=document.getElementById('sbal');if(_sbal)_sbal.textContent='…';
+  const _ban=document.getElementById('banner');if(_ban)_ban.style.display='none';
 }
 function updateBtns(){
   const ok=!!(selectedStyle&&selectedLine);
-  ['bpass','balter','breject'].forEach(id=>document.getElementById(id).disabled=!ok);
+  ['bpass','balter','breject'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=!ok;});
 }
 
 // ═══════════════════════════════════════════
