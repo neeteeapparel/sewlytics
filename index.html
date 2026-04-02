@@ -677,11 +677,19 @@ const t=k=>(T[lang]&&T[lang][k])||T.en[k]||k;
 // ═══════════════════════════════════════════
 const _sbH=()=>({apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`});
 async function sbGet(path){
-  // Append limit=10000 to bypass Supabase default 1000-row cap
+  // Paginate with offset to bypass Supabase Max Rows cap (default 1000)
+  const all=[];const PAGE=1000;let offset=0;
   const sep=path.includes('?')?'&':'?';
-  const res=await fetch(`${SB_URL}/rest/v1/${path}${sep}limit=10000`,{headers:_sbH()});
-  if(!res.ok) throw new Error(`SB ${res.status}`);
-  return res.json();
+  while(true){
+    const res=await fetch(`${SB_URL}/rest/v1/${path}${sep}limit=${PAGE}&offset=${offset}`,{headers:_sbH()});
+    if(!res.ok) throw new Error(`SB ${res.status}`);
+    const chunk=await res.json();
+    if(!Array.isArray(chunk)||chunk.length===0)break;
+    all.push(...chunk);
+    if(chunk.length<PAGE)break;
+    offset+=PAGE;
+  }
+  return all;
 }
 async function sbPost(table,body){
   const res=await fetch(`${SB_URL}/rest/v1/${table}`,{
