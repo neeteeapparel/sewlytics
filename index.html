@@ -802,11 +802,19 @@ async function initApp(){
 // DATA LOAD
 // ═══════════════════════════════════════════
 async function loadOrders(){
-  const res=await fetch(`${SB_URL}/rest/v1/orders?select=*&order=style_id.asc&limit=10000`,{
-    headers:{apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`}
-  });
-  if(!res.ok) throw new Error(`SB orders ${res.status}`);
-  const recs=await res.json();
+  const all=[];const PAGE=1000;let offset=0;
+  while(true){
+    const res=await fetch(`${SB_URL}/rest/v1/orders?select=*&order=style_id.asc&limit=${PAGE}&offset=${offset}`,{
+      headers:{apikey:SB_ANON_KEY,Authorization:`Bearer ${SB_ANON_KEY}`}
+    });
+    if(!res.ok) throw new Error(`SB orders ${res.status}`);
+    const chunk=await res.json();
+    if(!Array.isArray(chunk)||chunk.length===0)break;
+    all.push(...chunk);
+    if(chunk.length<PAGE)break;
+    offset+=PAGE;
+  }
+  const recs=all;
   allOrders=recs.map(r=>({
     id:r.airtable_id,styleId:r.style_id,style:r.style||'',
     color:r.color||'',po:r.po||'',customer:r.customer||'',
