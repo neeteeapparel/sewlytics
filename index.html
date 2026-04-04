@@ -1472,7 +1472,9 @@ async function loadReport(){
     if(fline)  qcPath+=`&line_name=eq.${encodeURIComponent(fline)}`;
     if(fcust)  qcPath+=`&customer=eq.${encodeURIComponent(fcust)}`;
     if(fstyle) qcPath+=`&style_id=eq.${encodeURIComponent(fstyle)}`;
-    const aqPath=`alter_queue?select=style_id,line_name,status,pieces_count,date_sent,reinspection_datetime,tat_hours,defect_name_en,customer`;
+    let aqPath=`alter_queue?date_sent=gte.${d1}&date_sent=lte.${d2}&select=style_id,line_name,status,pieces_count,date_sent,reinspection_datetime,tat_hours,defect_name_en,customer`;
+    if(fline)  aqPath+=`&line_name=eq.${encodeURIComponent(fline)}`;
+    if(fstyle) aqPath+=`&style_id=eq.${encodeURIComponent(fstyle)}`;
     const [qcRows,aqRows]=await Promise.all([sbGet(qcPath),sbGet(aqPath)]);
     // Wrap into Airtable-compatible shape so all downstream functions work unchanged
     const qcRecs=qcRows.map(r=>({fields:{
@@ -1500,7 +1502,7 @@ async function loadReport(){
 
     buildSummary(qcRecs,aqRecs);
     buildStyleTable(qcRecs);
-    buildLineTable(qcRecs);
+    buildLineTable(qcRecs,aqRecs);
     buildDefectChart(qcRecs);
     buildAlterTable(aqRecs);
     hideLoad();
@@ -1522,14 +1524,28 @@ function calcMetrics(recs){
   return{pass,alter,reject,rp,rr,total,dhu,altPassRate,tpass:pass+rp,treject:reject+rr};
 }
 
+function calcAQPassRate(aqRecs){
+  let aqPass=0,aqRej=0,aqPend=0;
+  aqRecs.forEach(r=>{
+    const pcs=r.fields['Pieces Count']||1;
+    const st=r.fields['Status']||'';
+    if(st==='Re-Inspected Pass')aqPass+=pcs;
+    else if(st==='Re-Inspected Reject')aqRej+=pcs;
+    else if(st==='Pending')aqPend+=pcs;
+  });
+  const aqTotal=aqPass+aqRej+aqPend;
+  return aqTotal>0?(aqPass/aqTotal*100):null;
+}
+
 function buildSummary(qcRecs,aqRecs){
   const m=calcMetrics(qcRecs);
+  const ar=calcAQPassRate(aqRecs);
   document.getElementById('ms-insp').textContent=m.total;
   document.getElementById('ms-pass').textContent=m.pass;
   document.getElementById('ms-alt').textContent=m.alter;
   document.getElementById('ms-rej').textContent=m.reject;
   document.getElementById('ms-dhu').textContent=m.total>0?m.dhu.toFixed(1)+'%':'—';
-  document.getElementById('ms-ar').textContent=m.alter>0?m.altPassRate.toFixed(0)+'%':'—';
+  document.getElementById('ms-ar').textContent=ar!==null?ar.toFixed(0)+'%':'—';
 }
 
 function buildStyleTable(recs){
@@ -1581,7 +1597,7 @@ function buildStyleTable(recs){
   });
 }
 
-function buildLineTable(recs){
+function buildLineTable(recs,aqRecs){
   const map={};
   recs.forEach(r=>{
     const ln=r.fields['Line Name']||'';if(!ln)return;
@@ -1589,7 +1605,12 @@ function buildLineTable(recs){
       map[ln]={lineName:ln,floor:lo.floor||'',recs:[]};}
     map[ln].recs.push(r);
   });
-  const rows=Object.values(map).map(s=>({...s,...calcMetrics(s.recs)}));
+  const rows=Object.values(map).map(s=>{
+    const m=calcMetrics(s.recs);
+    const lineAQ=(aqRecs||[]).filter(r=>r.fields['Line Name']===s.lineName);
+    const ar=calcAQPassRate(lineAQ);
+    return{...s,...m,altPassRate:ar};
+  });
   rows.sort((a,b)=>a.dhu-b.dhu);
   const tbody=document.getElementById('tbody-line');tbody.innerHTML='';
   if(!rows.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--t2);padding:20px">No data</td></tr>';return;}
@@ -1606,7 +1627,7 @@ function buildLineTable(recs){
       <td class="td-num td-alt">${r.alter}</td>
       <td class="td-num td-rej">${r.reject}</td>
       <td><div class="dhu-bar"><div class="dhu-track"><div class="dhu-fill ${cls}" style="width:${Math.min((r.dhu/Math.max(...rows.map(x=>x.dhu),1))*100,100)}%"></div></div><span class="td-dhu" style="min-width:48px">${r.dhu.toFixed(1)}%</span></div></td>
-      <td class="td-num" style="color:var(--pur)">${r.alter>0?r.altPassRate.toFixed(0)+'%':'—'}</td>`;
+      <td class="td-num" style="color:var(--pur)">${r.altPassRate!==null&&r.altPassRate!==undefined?r.altPassRate.toFixed(0)+'%':'—'}</td>`;
     tbody.appendChild(tr);
   });
 }
