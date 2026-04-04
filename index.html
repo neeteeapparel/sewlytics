@@ -293,9 +293,6 @@ tr:hover td{background:var(--s2)}
 .mgr-tabs{display:flex;gap:6px;margin-bottom:18px;background:var(--s1);border:1px solid var(--bdr);border-radius:var(--rs);padding:4px}
 .mtab{flex:1;background:none;border:none;border-radius:6px;color:var(--t2);font-family:inherit;font-size:13px;font-weight:600;padding:9px 8px;cursor:pointer;transition:all .2s;letter-spacing:.5px;text-align:center}
 .mtab.active{background:var(--teal);color:#fff}
-/* Style grouping toggle */
-.stog-btn{background:var(--s2);border:1px solid var(--bdr);border-radius:20px;color:var(--t2);font-family:inherit;font-size:12px;font-weight:600;padding:5px 14px;cursor:pointer;letter-spacing:.5px;transition:all .2s}
-.stog-btn.stog-active{background:var(--teal);color:#fff;border-color:var(--teal)}
 
 .tab-panel{display:none}
 .tab-panel.active{display:block}
@@ -561,10 +558,6 @@ tr:hover td{background:var(--s2)}
     <!-- TAB: STYLE DHU -->
     <div class="tab-panel active" id="tab-style">
       <div class="sec-title">Style-wise DHU Report</div>
-      <div style="display:flex;gap:6px;margin-bottom:12px">
-        <button id="stog-color" class="stog-btn stog-active" onclick="setStyleGroup('color')">Style + Color</button>
-        <button id="stog-style" class="stog-btn" onclick="setStyleGroup('style')">Style Only</button>
-      </div>
       <div class="tbl-wrap">
         <table id="tbl-style">
           <thead><tr>
@@ -1417,7 +1410,7 @@ function filterRptStyle(){
     item.className = 'd-item';
     const hl = q ? o.styleId.replace(new RegExp(`(${q})`,'gi'),'<mark>$1</mark>') : o.styleId;
     item.innerHTML = `<div class="dm">${hl}</div>
-      <div class="ds">${o.color} · ${o.customer} · ${o.type||''}</div>`;
+      <div class="ds">${o.customer}${o.type?' · '+o.type:''}</div>`;
     let ty = 0;
     item.addEventListener('touchstart', e => { ty = e.touches[0].clientY; }, {passive:true});
     item.addEventListener('touchend', e => { if(Math.abs(e.changedTouches[0].clientY-ty)<8){e.preventDefault();selectRptStyle(o);} });
@@ -1429,9 +1422,9 @@ function filterRptStyle(){
 }
 function selectRptStyle(o){
   selectedRptStyle = o;
-  document.getElementById('rpt-ssrch').value = `${o.styleId} — ${o.color}`;
+  document.getElementById('rpt-ssrch').value = o.styleId;
   document.getElementById('rpt-ssrch').classList.add('has-val');
-  document.getElementById('rpt-sval').value = o.styleId; // Style ID only, no PO
+  document.getElementById('rpt-sval').value = o.styleId;
   closeRptStyleDD();
   loadReport(); // auto-refresh when style selected
 }
@@ -1555,17 +1548,7 @@ function buildSummary(qcRecs,aqRecs){
   document.getElementById('ms-ar').textContent=ar!==null?ar.toFixed(0)+'%':'—';
 }
 
-let _styleGroupMode='color'; // 'color' or 'style'
 let _styleTableRecs=[], _styleTableAQ=[];
-
-function setStyleGroup(mode){
-  _styleGroupMode=mode;
-  document.getElementById('stog-color').classList.toggle('stog-active',mode==='color');
-  document.getElementById('stog-style').classList.toggle('stog-active',mode==='style');
-  // Show/hide color column header
-  document.getElementById('sth-color').textContent=mode==='color'?'Color':'Colors';
-  renderStyleTable();
-}
 
 function buildStyleTable(recs,aqRecs){
   _styleTableRecs=recs;
@@ -1576,14 +1559,16 @@ function buildStyleTable(recs,aqRecs){
 function renderStyleTable(){
   const recs=_styleTableRecs;
   const aqRecs=_styleTableAQ;
-  const byColor=_styleGroupMode==='color';
+  // Auto-detect grouping: split by Color when a specific style is selected, else group by Style only
+  const byColor=!!(selectedRptStyle);
+  document.getElementById('sth-color').textContent=byColor?'Color':'Colors';
   const map={};
   recs.forEach(r=>{
     const sid=r.fields['Style ID']||'';if(!sid)return;
     const color=r.fields['Color']||'';
     const key=byColor?(sid+'|||'+color):sid;
     if(!map[key]){
-      map[key]={styleId:sid,color:color,colors:new Set([color]),
+      map[key]={styleId:sid,color:color,colors:new Set(),
         customer:r.fields['Customer']||'',type:r.fields['Item Type']||'',
         cutSnaps:{},cutQty:0,recs:[]};
     }
@@ -1592,7 +1577,6 @@ function renderStyleTable(){
     if(snap>0) map[key].cutSnaps[snap]=(map[key].cutSnaps[snap]||0)+1;
     map[key].recs.push(r);
   });
-  // Resolve cutQty as mode (most frequent snapshot value)
   Object.values(map).forEach(s=>{
     const snaps=s.cutSnaps;const keys=Object.keys(snaps);
     if(keys.length>0){s.cutQty=Number(keys.reduce((a,b)=>snaps[a]>=snaps[b]?a:b));}
@@ -1600,11 +1584,7 @@ function renderStyleTable(){
   });
   const rows=Object.values(map).map(s=>{
     const m=calcMetrics(s.recs);
-    // Alter Pass Rate from alter queue filtered by style (and color if byColor)
-    const styleAQ=aqRecs.filter(r=>{
-      if(r.fields['Style ID']!==s.styleId)return false;
-      return true;
-    });
+    const styleAQ=aqRecs.filter(r=>r.fields['Style ID']===s.styleId);
     const ar=calcAQPassRate(styleAQ);
     return{...s,...m,altPassRate:ar,colorCount:s.colors.size};
   });
