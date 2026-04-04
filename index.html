@@ -1524,17 +1524,12 @@ function calcMetrics(recs){
 
 function buildSummary(qcRecs,aqRecs){
   const m=calcMetrics(qcRecs);
-  // All-time Re-Pass from Alter Queue (independent of date filter)
-  const aqRepass=aqRecs.filter(r=>(r.fields['Status']||'').includes('Pass')).length;
-  // Alter Pass Rate = all-time Re-Pass ÷ all-time Alter (from QC — date filtered)
-  // Use m.alter for date range, but re-pass from full alter queue
-  const altPassRate = m.alter>0 ? (aqRepass/m.alter*100) : 0;
   document.getElementById('ms-insp').textContent=m.total;
   document.getElementById('ms-pass').textContent=m.pass;
   document.getElementById('ms-alt').textContent=m.alter;
   document.getElementById('ms-rej').textContent=m.reject;
   document.getElementById('ms-dhu').textContent=m.total>0?m.dhu.toFixed(1)+'%':'—';
-  document.getElementById('ms-ar').textContent=m.alter>0?altPassRate.toFixed(0)+'%':'—';
+  document.getElementById('ms-ar').textContent=m.alter>0?m.altPassRate.toFixed(0)+'%':'—';
 }
 
 function buildStyleTable(recs){
