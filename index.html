@@ -1407,21 +1407,23 @@ function filterRptStyle(){
   allOpt.addEventListener('touchend', e => { e.preventDefault(); clearRptStyle(); });
   dd.appendChild(allOpt);
 
-  // Deduplicate by Style ID — show each style once, no color/PO
+  // Deduplicate by base Style — show each style once, no color/PO
   const seen = new Set();
   const unique = [];
-  allOrders.forEach(o => { if(!seen.has(o.styleId)){ seen.add(o.styleId); unique.push(o); } });
+  allOrders.forEach(o => {
+    const baseStyle = o.style || o.styleId;
+    if(!seen.has(baseStyle)){ seen.add(baseStyle); unique.push({...o, baseStyle}); }
+  });
 
   const filtered = q
     ? unique.filter(o =>
-        o.styleId.toLowerCase().includes(q) || o.style.toLowerCase().includes(q) ||
-        o.customer.toLowerCase().includes(q))
+        o.baseStyle.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q))
     : unique.slice(0, 80);
 
   filtered.forEach(o => {
     const item = document.createElement('div');
     item.className = 'd-item';
-    const hl = q ? o.styleId.replace(new RegExp(`(${q})`,'gi'),'<mark>$1</mark>') : o.styleId;
+    const hl = q ? o.baseStyle.replace(new RegExp(`(${q})`,'gi'),'<mark>$1</mark>') : o.baseStyle;
     item.innerHTML = `<div class="dm">${hl}</div>
       <div class="ds">${o.customer}${o.type?' · '+o.type:''}</div>`;
     let ty = 0;
@@ -1435,9 +1437,10 @@ function filterRptStyle(){
 }
 function selectRptStyle(o){
   selectedRptStyle = o;
-  document.getElementById('rpt-ssrch').value = o.styleId;
+  const baseStyle = o.style || o.styleId;
+  document.getElementById('rpt-ssrch').value = baseStyle;
   document.getElementById('rpt-ssrch').classList.add('has-val');
-  document.getElementById('rpt-sval').value = o.styleId;
+  document.getElementById('rpt-sval').value = baseStyle;
   closeRptStyleDD();
   loadReport(); // auto-refresh when style selected
 }
@@ -1484,10 +1487,10 @@ async function loadReport(){
     qcPath+=`&select=style_id,style,color,po,customer,item_type,line_name,result,pieces_count,is_alter_reinspection,inspection_date,inspection_datetime,defect_name_en,defect_category,cut_qty_snapshot`;
     if(fline)  qcPath+=`&line_name=eq.${encodeURIComponent(fline)}`;
     if(fcust)  qcPath+=`&customer=eq.${encodeURIComponent(fcust)}`;
-    if(fstyle) qcPath+=`&style_id=eq.${encodeURIComponent(fstyle)}`;
-    let aqPath=`alter_queue?date_sent=gte.${d1}&date_sent=lte.${d2}&select=style_id,line_name,status,pieces_count,date_sent,reinspection_datetime,tat_hours,defect_name_en,customer`;
+    if(fstyle) qcPath+=`&style=eq.${encodeURIComponent(fstyle)}`;
+    let aqPath=`alter_queue?date_sent=gte.${d1}&date_sent=lte.${d2}&select=style_id,style,line_name,status,pieces_count,date_sent,reinspection_datetime,tat_hours,defect_name_en,customer`;
     if(fline)  aqPath+=`&line_name=eq.${encodeURIComponent(fline)}`;
-    if(fstyle) aqPath+=`&style_id=eq.${encodeURIComponent(fstyle)}`;
+    if(fstyle) aqPath+=`&style=eq.${encodeURIComponent(fstyle)}`;
     const [qcRows,aqRows]=await Promise.all([sbGet(qcPath),sbGet(aqPath)]);
     // Wrap into Airtable-compatible shape so all downstream functions work unchanged
     const qcRecs=qcRows.map(r=>({fields:{
@@ -1500,7 +1503,7 @@ async function loadReport(){
       'Cut Qty Snapshot':r.cut_qty_snapshot
     }}));
     const aqRecs=aqRows.map(r=>({fields:{
-      'Style ID':r.style_id,'Line Name':r.line_name,'Status':r.status,
+      'Style ID':r.style_id,'Style':r.style||r.style_id,'Line Name':r.line_name,'Status':r.status,
       'Pieces Count':r.pieces_count,'Date Sent to Alter':r.date_sent,
       'Reinspection DateTime':r.reinspection_datetime,'TAT Hours':r.tat_hours,
       'Defect Name EN':r.defect_name_en,'Customer':r.customer
@@ -1599,10 +1602,11 @@ function renderStyleTable(){
   const map={};
   recs.forEach(r=>{
     const sid=r.fields['Style ID']||'';if(!sid)return;
+    const baseStyle=r.fields['Style']||sid;
     const color=r.fields['Color']||'';
-    const key=byColor?(sid+'|||'+color):sid;
+    const key=byColor?sid:baseStyle;
     if(!map[key]){
-      map[key]={styleId:sid,color:color,colors:new Set(),
+      map[key]={styleId:byColor?sid:baseStyle,baseStyle,color:color,colors:new Set(),
         customer:r.fields['Customer']||'',type:r.fields['Item Type']||'',
         cutSnaps:{},cutQty:0,recs:[]};
     }
@@ -1618,7 +1622,7 @@ function renderStyleTable(){
   });
   const rows=Object.values(map).map(s=>{
     const m=calcMetrics(s.recs);
-    const styleAQ=aqRecs.filter(r=>r.fields['Style ID']===s.styleId);
+    const styleAQ=aqRecs.filter(r=>(r.fields['Style']||r.fields['Style ID'])===s.baseStyle);
     const ar=calcAQPassRate(styleAQ);
     return{...s,...m,altPassRate:ar,colorCount:s.colors.size};
   });
@@ -1633,7 +1637,7 @@ function renderStyleTable(){
       ?`<span style="background:rgba(124,58,237,0.12);color:var(--pur);border-radius:4px;padding:2px 7px;font-size:12px;font-weight:700">${r.color||'—'}</span>`
       :`<span style="background:var(--s2);color:var(--t2);border-radius:4px;padding:2px 7px;font-size:12px;font-weight:600">${r.colorCount} color${r.colorCount>1?'s':''}</span>`;
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td style="font-weight:600">${r.styleId}</td>
+    tr.innerHTML=`<td style="font-weight:600">${byColor?r.styleId:r.baseStyle}</td>
       <td>${colorCell}</td>
       <td style="color:var(--t2)">${r.customer}</td>
       <td style="color:var(--t2)">${r.type}</td>
