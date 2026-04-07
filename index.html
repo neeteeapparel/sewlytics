@@ -1967,8 +1967,8 @@ function exportCSV(){
 // State
 let finStyle=null,finStage=null,finStageLocked=false,finActiveLines=[],_finAlterQueue=[];
 let finishingStages=[],finPendingAction=null,finSelectedLine=null;
-let finSelectedCategory=null,finSelectedDefect=null,_finPendingReinspect=null,finDdHi=-1;
-let _finSewPassMap={},_finFinPassMap={};   // styleId → total pcs
+let finSelectedCategory=null,finSelectedDefects=[],_finPendingReinspect=null,finDdHi=-1;
+let _finSewPassMap={},_finFinPassMap={},_finDefectFreq={};   // styleId → total pcs; defectName → count
 
 // Line colour palette (fallback)
 const FIN_PALETTE=['#0f766e','#0369a1','#7c3aed','#b45309','#be123c','#0891b2','#4d7c0f','#9333ea','#c2410c','#1d4ed8'];
@@ -1986,17 +1986,23 @@ async function loadFinishingStages(){
   }catch(e){console.warn('finishing_stages load failed:',e);finishingStages=[];}
 }
 
-// Load sewing pass counts and finishing pass counts per style
+// Load sewing pass counts, finishing pass counts, and defect frequency
 async function loadFinPassMaps(){
   try{
-    const [sewRows,finRows]=await Promise.all([
+    const [sewRows,finRows,freqRows]=await Promise.all([
       sbGet('qc_inspections?result=eq.Pass&is_alter_reinspection=eq.false&select=style_id,pieces_count'),
-      sbGet('finishing_inspections?result=eq.Pass&select=style_id,pieces_count')
+      sbGet('finishing_inspections?result=eq.Pass&select=style_id,pieces_count'),
+      sbGet('finishing_inspections?defect_name_en=not.is.null&select=defect_name_en')
     ]);
     _finSewPassMap={};
     sewRows.forEach(r=>{const id=r.style_id;if(id)_finSewPassMap[id]=(_finSewPassMap[id]||0)+(r.pieces_count||1);});
     _finFinPassMap={};
     finRows.forEach(r=>{const id=r.style_id;if(id)_finFinPassMap[id]=(_finFinPassMap[id]||0)+(r.pieces_count||1);});
+    _finDefectFreq={};
+    freqRows.forEach(r=>{
+      (r.defect_name_en||'').split(',').map(s=>s.trim()).filter(Boolean)
+        .forEach(name=>{_finDefectFreq[name]=(_finDefectFreq[name]||0)+1;});
+    });
   }catch(e){console.warn('loadFinPassMaps error:',e);}
 }
 
@@ -2118,18 +2124,18 @@ function renderFinLines(){
 function renderFinStages(){
   const cont=document.getElementById('fin-stage-btns');cont.innerHTML='';
   if(!finishingStages.length){cont.innerHTML='<span style="color:var(--t2);font-size:13px">No stages configured</span>';return;}
-  if(finStageLocked&&finStage){
-    // Show locked state — stage name + change button
-    cont.innerHTML=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="background:var(--teal);color:#fff;border-radius:20px;padding:8px 20px;font-size:14px;font-weight:700">✓ ${finStage.name}</span>
-      <button onclick="finUnlockStage()" style="background:none;border:1px solid var(--bdr);border-radius:20px;color:var(--t2);font-family:inherit;font-size:12px;padding:6px 14px;cursor:pointer;">✕ Change Stage</button>
-    </div>`;
-    return;
-  }
   finishingStages.forEach(s=>{
     const btn=document.createElement('button');
-    btn.className='fin-stage-btn'+(finStage&&finStage.id===s.id?' active':'');
-    btn.textContent=s.name;btn.onclick=()=>finSelectStage(s);
+    const isActive=finStage&&finStage.id===s.id;
+    const isLocked=finStageLocked&&!isActive;
+    btn.className='fin-stage-btn'+(isActive?' active':'');
+    btn.textContent=s.name;
+    if(isLocked){
+      btn.style.opacity='0.35';btn.style.cursor='not-allowed';
+      btn.onclick=()=>showToast('Stage locked — logout & re-login to change','reject');
+    } else if(!finStageLocked){
+      btn.onclick=()=>finSelectStage(s);
+    }
     cont.appendChild(btn);
   });
 }
@@ -2140,14 +2146,6 @@ function finSelectStage(s){
   document.getElementById('fin-stats-card').style.display='block';
   document.getElementById('fin-action-card').style.display='block';
   loadFinStats();
-}
-function finUnlockStage(){
-  if(!confirm('Change stage? Today\'s stats will reload for the new stage.'))return;
-  finStageLocked=false;finStage=null;
-  document.getElementById('fin-stage-info').textContent='';
-  document.getElementById('fin-stats-card').style.display='none';
-  document.getElementById('fin-action-card').style.display='none';
-  renderFinStages();
 }
 
 // ── Stats (today + all-time) ──
@@ -2232,7 +2230,7 @@ function finCloseLine(){
 
 // ── Category + Defect sheet ──
 function finOpenCat(act){
-  finSelectedCategory=null;finSelectedDefect=null;
+  finSelectedCategory=null;finSelectedDefects=[];
   document.getElementById('fin-csh-title').textContent=act==='Alter'?'🟠 Alter — Select Category':'❌ Reject — Select Category';
   document.getElementById('fin-csh-sub').textContent=`${finStyle?finStyle.styleId:''} · ${finSelectedLine||''}`;
   // Get distinct categories from allDefects
@@ -2257,10 +2255,10 @@ function finOpenCat(act){
 function finCloseCat(){
   document.getElementById('fin-cov').classList.remove('open');
   document.getElementById('fin-csh').classList.remove('open');
-  finSelectedCategory=null;finSelectedDefect=null;_finPendingReinspect=null;
+  finSelectedCategory=null;finSelectedDefects=[];_finPendingReinspect=null;
 }
 function finSelectCategory(cat){
-  finSelectedCategory=cat;finSelectedDefect=null;
+  finSelectedCategory=cat;finSelectedDefects=[];
   document.querySelectorAll('.fin-cat-btn').forEach(b=>b.classList.remove('active'));
   const pb=document.getElementById(`fcat-${cat.replace(/[^a-zA-Z0-9]/g,'_')}`);if(pb)pb.classList.add('active');
   document.getElementById('fin-def-section').style.display='block';
@@ -2273,13 +2271,19 @@ function renderFinDefectList(q=''){
   const list=document.getElementById('fin-dlist');if(!list)return;
   list.innerHTML='';
   const fl=q.toLowerCase();
-  const defs=allDefects.filter(d=>d.category===finSelectedCategory&&
-    (!fl||d.nameEN.toLowerCase().includes(fl)||(d.nameHI&&d.nameHI.includes(fl))));
+  // Filter by category + search, then sort by frequency (most used first)
+  const defs=allDefects
+    .filter(d=>d.category===finSelectedCategory&&
+      (!fl||d.nameEN.toLowerCase().includes(fl)||(d.nameHI&&d.nameHI.includes(fl))))
+    .sort((a,b)=>(_finDefectFreq[b.nameEN]||0)-(_finDefectFreq[a.nameEN]||0));
   if(!defs.length){list.innerHTML='<div class="d-empty">No defects in this category</div>';return;}
   defs.forEach(d=>{
-    const isSel=finSelectedDefect&&finSelectedDefect.id===d.id;
+    const isSel=finSelectedDefects.some(s=>s.id===d.id);
+    const freq=_finDefectFreq[d.nameEN]||0;
     const el=document.createElement('div');el.className='def-item'+(isSel?' sel':'');
-    el.innerHTML=`<div class="def-dot">${isSel?'✓':''}</div><div style="flex:1"><div class="def-name">${d.nameEN}</div>${d.nameHI?`<div class="def-hi">${d.nameHI}</div>`:''}</div>`;
+    el.innerHTML=`<div class="def-dot">${isSel?'✓':''}</div>
+      <div style="flex:1"><div class="def-name">${d.nameEN}</div>${d.nameHI?`<div class="def-hi">${d.nameHI}</div>`:''}</div>
+      ${freq>0?`<div style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace">${freq}×</div>`:''}`;
     let _ty=0;
     el.addEventListener('touchstart',e=>{_ty=e.touches[0].clientY;},{passive:true});
     el.addEventListener('touchend',e=>{if(Math.abs(e.changedTouches[0].clientY-_ty)<8){e.preventDefault();finPickDefect(d);}});
@@ -2288,20 +2292,24 @@ function renderFinDefectList(q=''){
   });
 }
 function finPickDefect(d){
-  finSelectedDefect=(finSelectedDefect&&finSelectedDefect.id===d.id)?null:d;
+  const i=finSelectedDefects.findIndex(s=>s.id===d.id);
+  if(i>=0)finSelectedDefects.splice(i,1);else finSelectedDefects.push(d);
   const q=document.getElementById('fin-dsrch')?document.getElementById('fin-dsrch').value:'';
   renderFinDefectList(q);
   const btn=document.getElementById('fin-bconf');
-  if(btn)btn.textContent=finSelectedDefect
-    ?`Save — ${finSelectedCategory} · ${finSelectedDefect.nameEN}`
-    :`Save — ${finSelectedCategory} (no specific defect)`;
+  if(btn){
+    const n=finSelectedDefects.length;
+    btn.textContent=n>0
+      ?`Save — ${finSelectedCategory} · ${finSelectedDefects.map(d=>d.nameEN).join(', ')}`
+      :`Save — ${finSelectedCategory} (no specific defect)`;
+  }
 }
 async function finConfirmDefect(){
   if(!finSelectedCategory){showToast('Select a category first','reject');return;}
   const defectData={
     category:finSelectedCategory,
-    nameEN:finSelectedDefect?finSelectedDefect.nameEN:'',
-    nameHI:finSelectedDefect?finSelectedDefect.nameHI||'':''
+    nameEN:finSelectedDefects.map(d=>d.nameEN).join(', '),
+    nameHI:finSelectedDefects.map(d=>d.nameHI||d.nameEN).join(', ')
   };
   finCloseCat();
   if(_finPendingReinspect){
@@ -2347,7 +2355,6 @@ async function finSaveInspection(result,defect,lineName,isRI=false,queueId=null)
         defect_name_en:aqDefect,
         pieces_count:1,date_sent:now.toISOString().split('T')[0],
         status:'Pending',
-        inspector_name:currentUser.fullName||currentUser.username,
         ...(saved?.id?{original_inspection_id:saved.id}:{})
       });
       await loadFinAlterQueue();
