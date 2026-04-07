@@ -222,6 +222,19 @@ body{font-family:'Rajdhani','Noto Sans Devanagari',sans-serif;background:var(--b
 .empty-st .ei{font-size:36px;margin-bottom:10px}
 
 /* ═══════════════════════════════════
+   FINISHING CHECKER
+═══════════════════════════════════ */
+#finishing-app{display:none;flex-direction:column;min-height:100vh}
+.fin-stage-btn{background:var(--s2);border:1px solid var(--bdr);border-radius:20px;color:var(--t2);font-family:inherit;font-size:13px;font-weight:600;padding:8px 18px;cursor:pointer;transition:all .2s}
+.fin-stage-btn.active{background:var(--teal);color:#fff;border-color:var(--teal)}
+.fin-line-sq{width:76px;height:76px;border-radius:12px;border:none;color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:transform .1s;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.fin-line-sq:active{transform:scale(.93)}
+.fin-cat-btn{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);color:var(--text);font-family:inherit;font-size:13px;font-weight:600;padding:10px 12px;cursor:pointer;transition:all .2s;flex:1;min-width:80px;text-align:center}
+.fin-cat-btn.active{background:var(--teal);color:#fff;border-color:var(--teal)}
+.fin-stats-row{display:flex;gap:10px}
+.fin-stat-box{flex:1;text-align:center;border-radius:var(--rs);padding:12px 6px}
+
+/* ═══════════════════════════════════
    MANAGER / DHU REPORT
 ═══════════════════════════════════ */
 #mgr-app{display:none;flex-direction:column;min-height:100vh}
@@ -639,6 +652,104 @@ tr:hover td{background:var(--s2)}
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════
+     FINISHING CHECKER APP
+════════════════════════════════════════════════════════════ -->
+<div id="finishing-app">
+  <!-- Header -->
+  <div class="hdr">
+    <div class="hdr-brand">Sewlytics</div>
+    <div class="hdr-right">
+      <div class="save-dot" id="fin-sdot"></div>
+      <button class="btn-sm" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+  <!-- Info bar -->
+  <div class="info-bar">
+    <span style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2)">Finishing QC</span>
+    <span class="v" id="fin-uname">—</span>
+    <span id="fin-stage-info" style="color:var(--teal);font-weight:600"></span>
+  </div>
+  <!-- Main -->
+  <div class="main">
+    <!-- Style + Color -->
+    <div class="card">
+      <div class="card-title">SELECT STYLE + COLOUR</div>
+      <div class="srch-wrap" id="fin-swrap">
+        <input type="text" id="fin-ssrch" placeholder="Search style or colour..."
+          autocomplete="off" autocorrect="off" autocapitalize="off"
+          oninput="finFilterStyle()" onfocus="finOpenStyleDD()" onkeydown="finStyleKey(event)"
+          style="font-weight:500;font-size:15px">
+        <div class="s-drop" id="fin-sdd"></div>
+      </div>
+    </div>
+    <!-- Stage selector -->
+    <div class="card" id="fin-stage-card" style="display:none">
+      <div class="card-title">WHICH STAGE ARE YOU DOING?</div>
+      <div id="fin-stage-btns" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"></div>
+    </div>
+    <!-- Finishing alter queue strip -->
+    <div class="alt-strip" id="fin-aqstrip" style="display:none" onclick="finOpenQueue()">
+      <div>
+        <div class="alt-info">🟠 Finishing Alter Pending</div>
+        <div class="alt-sub">Tap to Re-inspect →</div>
+      </div>
+      <div class="alt-ct" id="fin-aqct">0</div>
+    </div>
+    <!-- Stats -->
+    <div class="card" id="fin-stats-card" style="display:none">
+      <div class="card-title">TODAY'S FINDINGS</div>
+      <div class="fin-stats-row">
+        <div class="fin-stat-box" style="background:var(--grn-d)">
+          <div style="font-size:32px;font-weight:700;color:var(--grn)" id="fin-sp">0</div>
+          <div style="font-size:11px;color:var(--t2);letter-spacing:1px;text-transform:uppercase">Pass</div>
+        </div>
+        <div class="fin-stat-box" style="background:var(--org-d)">
+          <div style="font-size:32px;font-weight:700;color:var(--org)" id="fin-sa">0</div>
+          <div style="font-size:11px;color:var(--t2);letter-spacing:1px;text-transform:uppercase">Alter</div>
+        </div>
+        <div class="fin-stat-box" style="background:var(--red-d)">
+          <div style="font-size:32px;font-weight:700;color:var(--red)" id="fin-sr">0</div>
+          <div style="font-size:11px;color:var(--t2);letter-spacing:1px;text-transform:uppercase">Reject</div>
+        </div>
+      </div>
+    </div>
+    <!-- Action buttons -->
+    <div class="card" id="fin-action-card" style="display:none">
+      <div class="card-title">INSPECT PIECE</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:6px">
+        <button class="act-btn pass" onclick="finDoAction('Pass')">✅<br>PASS</button>
+        <button class="act-btn alter" onclick="finDoAction('Alter')">🟠<br>ALTER</button>
+        <button class="act-btn reject" onclick="finDoAction('Reject')">❌<br>REJECT</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FINISHING ALTER QUEUE SHEET -->
+<div class="overlay" id="fin-qov" onclick="finCloseQueue()"></div>
+<div class="sheet" id="fin-qsh">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><div><div class="sh-title">🟠 Finishing Alter Queue</div><div class="sh-sub">Re-inspect returned pieces</div></div></div>
+  <div class="sh-body" id="fin-qbody"></div>
+</div>
+
+<!-- FINISHING LINE SELECTOR SHEET -->
+<div class="overlay" id="fin-lov" onclick="finCloseLine()"></div>
+<div class="sheet" id="fin-lsh">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><div><div class="sh-title" id="fin-lsh-title">Select Sewing Line</div><div class="sh-sub">Which line's piece is this?</div></div><button class="btn-back" onclick="finCloseLine()">← Back</button></div>
+  <div class="sh-body" id="fin-lbody"></div>
+</div>
+
+<!-- FINISHING DEFECT / CATEGORY SHEET -->
+<div class="overlay" id="fin-cov" onclick="finCloseCat()"></div>
+<div class="sheet" id="fin-csh">
+  <div class="sh-handle"></div>
+  <div class="sh-hdr"><div><div class="sh-title" id="fin-csh-title">Select Defect</div><div class="sh-sub" id="fin-csh-sub">—</div></div><button class="btn-back" onclick="finCloseCat()">← Back</button></div>
+  <div class="sh-body" id="fin-cbody"></div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════
 // CONFIG
@@ -775,6 +886,7 @@ function doLogout(){
   sessionStorage.removeItem('sw_user');currentUser=null;
   document.getElementById('app').style.display='none';
   document.getElementById('mgr-app').style.display='none';
+  document.getElementById('finishing-app').style.display='none';
   showLogin();hideLoad();
 }
 
@@ -783,14 +895,15 @@ function doLogout(){
 // ═══════════════════════════════════════════
 async function initApp(){
   const rawRole=(currentUser.role||'').toLowerCase().trim();
-  // Flexible role check — handles Admin, admin, ADMIN, Manager, manager etc
   const isMgr=rawRole.includes('admin')||rawRole.includes('manager');
-  console.log('User role:', currentUser.role, '→ isMgr:', isMgr);
+  const isFin=rawRole.includes('finishing');
+  console.log('User role:', currentUser.role, '→ isMgr:', isMgr, 'isFin:', isFin);
   showLoad('Loading data...');
   try{
-    // Managers don't need alter queue on load
     if(isMgr){
       await Promise.all([loadOrders(),loadLines(),loadDefects()]);
+    } else if(isFin){
+      await Promise.all([loadOrders(),loadLines(),loadDefects(),loadFinishingStages()]);
     } else {
       await Promise.all([loadOrders(),loadLines(),loadDefects(),loadAlterQueue()]);
     }
@@ -799,6 +912,9 @@ async function initApp(){
       document.getElementById('mgr-app').style.display='flex';
       initManagerFilters();
       loadReport();
+    } else if(isFin){
+      document.getElementById('finishing-app').style.display='flex';
+      initFinishingScreen();
     } else {
       document.getElementById('app').style.display='flex';
       document.getElementById('cn').textContent=currentUser.fullName;
@@ -850,7 +966,7 @@ async function loadLines(){
   }
   allLines=recs.map(r=>({
     id:String(r.id),lineName:r.line_name||'',floor:r.floor||'',
-    contractor:r.contractor||'',abbr:r.abbr||''
+    contractor:r.contractor||'',abbr:r.abbr||'',color:r.color||''
   })).filter(l=>l.lineName);
   // Resolve linked assigned line
   if(currentUser&&currentUser.assignedLine&&currentUser.assignedLine.startsWith('rec')){
@@ -1806,6 +1922,362 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download=`sewlytics-report-${new Date().toISOString().split('T')[0]}.csv`;
   a.click();URL.revokeObjectURL(url);
   showToast('CSV exported!','pass');
+}
+
+// ═══════════════════════════════════════════
+// FINISHING CHECKER
+// ═══════════════════════════════════════════
+
+// State
+let finStyle=null,finStage=null,finActiveLines=[],_finAlterQueue=[];
+let finishingStages=[],finPendingAction=null,finSelectedLine=null;
+let finSelectedDefects=[],_finPendingReinspect=null,finDdHi=-1;
+
+// Consistent line color from palette (fallback if no color in DB)
+const FIN_PALETTE=['#0f766e','#0369a1','#7c3aed','#b45309','#be123c','#0891b2','#4d7c0f','#9333ea','#c2410c','#1d4ed8'];
+function getLineColor(ln){
+  const lo=allLines.find(l=>l.lineName===ln);
+  if(lo&&lo.color)return lo.color;
+  let h=0;for(let i=0;i<ln.length;i++)h=(h*31+ln.charCodeAt(i))&0xFFFF;
+  return FIN_PALETTE[h%FIN_PALETTE.length];
+}
+
+async function loadFinishingStages(){
+  try{
+    const recs=await sbGet('finishing_stages?is_active=eq.true&order=order_no.asc');
+    finishingStages=recs.map(r=>({id:r.id,name:r.name||r.stage_name||'Stage',sortOrder:r.order_no||r.sort_order||99}));
+  }catch(e){console.warn('finishing_stages load failed:',e);finishingStages=[];}
+}
+
+function initFinishingScreen(){
+  const el=document.getElementById('fin-uname');
+  if(el)el.textContent=currentUser.fullName||currentUser.username;
+  document.getElementById('fin-ssrch').value='';
+  finStyle=null;finStage=null;finSelectedLine=null;
+  document.getElementById('fin-stage-card').style.display='none';
+  document.getElementById('fin-stats-card').style.display='none';
+  document.getElementById('fin-action-card').style.display='none';
+  document.getElementById('fin-aqstrip').style.display='none';
+  loadFinAlterQueue();
+}
+
+// ── Style dropdown ──
+function finOpenStyleDD(){finFilterStyle();document.getElementById('fin-sdd').classList.add('open');}
+function finCloseStyleDD(){document.getElementById('fin-sdd').classList.remove('open');}
+function finFilterStyle(){
+  const q=document.getElementById('fin-ssrch').value.trim().toLowerCase();
+  const dd=document.getElementById('fin-sdd');dd.innerHTML='';finDdHi=-1;
+  const filtered=q?allOrders.filter(o=>
+    o.styleId.toLowerCase().includes(q)||o.style.toLowerCase().includes(q)||
+    o.color.toLowerCase().includes(q)||o.customer.toLowerCase().includes(q)
+  ):allOrders.slice(0,60);
+  if(!filtered.length){dd.innerHTML='<div class="d-empty">No styles found</div>';dd.classList.add('open');return;}
+  filtered.forEach(o=>{
+    const div=document.createElement('div');div.className='d-item';
+    const hl=q?o.styleId.replace(new RegExp(`(${q})`,'gi'),'<mark>$1</mark>'):o.styleId;
+    div.innerHTML=`<div class="dm">${hl}</div>
+      <div class="ds" style="display:flex;gap:8px;flex-wrap:wrap">
+        <span style="background:rgba(124,58,237,0.12);color:var(--pur);border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700">${o.color||''}</span>
+        <span style="color:var(--t2)">${o.customer}</span>
+      </div>`;
+    let ty=0;
+    div.addEventListener('touchstart',e=>{ty=e.touches[0].clientY;},{passive:true});
+    div.addEventListener('touchend',e=>{if(Math.abs(e.changedTouches[0].clientY-ty)<8){e.preventDefault();finSelectStyle(o);}});
+    div.addEventListener('mousedown',e=>{e.preventDefault();finSelectStyle(o);});
+    dd.appendChild(div);
+  });
+  dd.classList.add('open');
+}
+function finSelectStyle(o){
+  finStyle=o;
+  document.getElementById('fin-ssrch').value=`${o.styleId} — ${o.color} — ${o.customer}`;
+  document.getElementById('fin-ssrch').classList.add('has-val');
+  finCloseStyleDD();
+  onFinStyleSelected();
+}
+function finStyleKey(e){
+  const items=document.getElementById('fin-sdd').querySelectorAll('.d-item');
+  if(e.key==='ArrowDown'){e.preventDefault();finDdHi=Math.min(finDdHi+1,items.length-1);items.forEach((el,i)=>el.classList.toggle('hi',i===finDdHi));}
+  else if(e.key==='ArrowUp'){e.preventDefault();finDdHi=Math.max(finDdHi-1,0);items.forEach((el,i)=>el.classList.toggle('hi',i===finDdHi));}
+  else if(e.key==='Escape')finCloseStyleDD();
+}
+document.addEventListener('click',e=>{
+  const w=document.getElementById('fin-swrap');
+  if(w&&!w.contains(e.target))finCloseStyleDD();
+});
+
+async function onFinStyleSelected(){
+  if(!finStyle)return;
+  finStage=null;
+  document.getElementById('fin-stage-info').textContent='';
+  document.getElementById('fin-stage-card').style.display='block';
+  document.getElementById('fin-stats-card').style.display='none';
+  document.getElementById('fin-action-card').style.display='none';
+  renderFinStages();
+  // Load lines for this style (for line picker)
+  const _lr=finStyle.linesRaw||'';
+  let sl=[];
+  try{sl=(_lr.trim().startsWith('[')?JSON.parse(_lr):_lr.split(',')).map(s=>s.trim()).filter(Boolean);}catch(e){sl=[];}
+  finActiveLines=sl.length?sl.filter(ln=>allLines.find(l=>l.lineName===ln)):allLines.map(l=>l.lineName);
+  await loadFinAlterQueue();
+}
+
+// ── Stages ──
+function renderFinStages(){
+  const cont=document.getElementById('fin-stage-btns');cont.innerHTML='';
+  if(!finishingStages.length){
+    cont.innerHTML='<span style="color:var(--t2);font-size:13px">No stages configured — add them in finishing_stages table</span>';return;
+  }
+  finishingStages.forEach(s=>{
+    const btn=document.createElement('button');
+    btn.className='fin-stage-btn'+(finStage&&finStage.id===s.id?' active':'');
+    btn.textContent=s.name;btn.onclick=()=>finSelectStage(s);
+    cont.appendChild(btn);
+  });
+}
+function finSelectStage(s){
+  finStage=s;
+  document.getElementById('fin-stage-info').textContent=s.name;
+  renderFinStages();
+  document.getElementById('fin-stats-card').style.display='block';
+  document.getElementById('fin-action-card').style.display='block';
+  loadFinStats();
+}
+
+// ── Stats ──
+async function loadFinStats(){
+  if(!finStyle||!finStage)return;
+  const today=new Date().toISOString().split('T')[0];
+  try{
+    const rows=await sbGet(`finishing_inspections?style_id=eq.${encodeURIComponent(finStyle.styleId)}&stage_name=eq.${encodeURIComponent(finStage.name)}&inspection_date=eq.${today}&select=result,pieces_count`);
+    let p=0,a=0,r=0;
+    rows.forEach(x=>{const pcs=x.pieces_count||1;if(x.result==='Pass')p+=pcs;else if(x.result==='Alter')a+=pcs;else if(x.result==='Reject')r+=pcs;});
+    document.getElementById('fin-sp').textContent=p;
+    document.getElementById('fin-sa').textContent=a;
+    document.getElementById('fin-sr').textContent=r;
+  }catch(e){console.warn('loadFinStats error:',e);}
+}
+
+// ── Actions ──
+function finDoAction(act){
+  if(!finStyle){showToast('Select a style first','reject');return;}
+  if(!finStage){showToast('Select a stage first','reject');return;}
+  finPendingAction=act;_finPendingReinspect=null;
+  if(act==='Pass'){
+    finSaveInspection('Pass',null,null);
+  } else {
+    // Alter or Reject: need sewing line selection + defect
+    if(finActiveLines.length===1){
+      finSelectedLine=finActiveLines[0];
+      finOpenCat(act);
+    } else {
+      finOpenLineSheet(act);
+    }
+  }
+}
+
+// ── Line selector sheet ──
+function finOpenLineSheet(act){
+  finPendingAction=act;
+  const body=document.getElementById('fin-lbody');body.innerHTML='';
+  document.getElementById('fin-lsh-title').textContent=act==='Alter'?'🟠 Which Line — Alter':'❌ Which Line — Reject';
+  const grid=document.createElement('div');
+  grid.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:8px 0';
+  (finActiveLines.length?finActiveLines:allLines.map(l=>l.lineName)).forEach(ln=>{
+    const btn=document.createElement('button');btn.className='fin-line-sq';
+    btn.style.background=getLineColor(ln);
+    const lo=allLines.find(l=>l.lineName===ln);
+    btn.innerHTML=`<div style="font-size:11px;opacity:.8;margin-bottom:2px">${lo&&lo.floor?lo.floor:''}</div><div style="font-size:14px;font-weight:800;letter-spacing:.5px">${ln}</div>`;
+    btn.onclick=()=>{finSelectedLine=ln;finCloseLine();finOpenCat(finPendingAction);};
+    grid.appendChild(btn);
+  });
+  body.appendChild(grid);
+  document.getElementById('fin-lov').classList.add('open');
+  document.getElementById('fin-lsh').classList.add('open');
+}
+function finCloseLine(){
+  document.getElementById('fin-lov').classList.remove('open');
+  document.getElementById('fin-lsh').classList.remove('open');
+}
+
+// ── Defect sheet ──
+function finOpenCat(act){
+  finSelectedDefects=[];
+  document.getElementById('fin-csh-title').textContent=act==='Alter'?'🟠 Select Defect — Alter':'❌ Select Defect — Reject';
+  document.getElementById('fin-csh-sub').textContent=`${finStyle?finStyle.styleId:''} · ${finSelectedLine||''}`;
+  // Build body: search + list + confirm
+  const body=document.getElementById('fin-cbody');
+  body.innerHTML=`<div class="def-search"><span class="si">🔍</span><input type="text" id="fin-dsrch" placeholder="Search defect..." autocorrect="off" autocomplete="off" oninput="renderFinDefectList(this.value)" style="width:100%;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);font-family:inherit;font-size:15px;padding:11px 16px 11px 38px;outline:none"></div>
+    <div id="fin-dlist"></div>
+    <div style="padding:14px 0 4px"><button class="btn-confirm" id="fin-bconf" disabled onclick="finConfirmDefect()">Select a defect to confirm</button></div>`;
+  renderFinDefectList('');
+  document.getElementById('fin-cov').classList.add('open');
+  document.getElementById('fin-csh').classList.add('open');
+}
+function finCloseCat(){
+  document.getElementById('fin-cov').classList.remove('open');
+  document.getElementById('fin-csh').classList.remove('open');
+  finSelectedDefects=[];_finPendingReinspect=null;
+}
+function renderFinDefectList(q=''){
+  const list=document.getElementById('fin-dlist');if(!list)return;
+  list.innerHTML='';
+  const fl=q.toLowerCase();
+  const cats={};
+  allDefects.filter(d=>!fl||d.nameEN.toLowerCase().includes(fl)||(d.nameHI&&d.nameHI.includes(fl)))
+    .forEach(d=>{if(!cats[d.category])cats[d.category]=[];cats[d.category].push(d);});
+  Object.entries(cats).forEach(([cat,defs])=>{
+    const ce=document.createElement('div');ce.className='def-cat';ce.textContent=cat;list.appendChild(ce);
+    defs.forEach(d=>{
+      const isSel=finSelectedDefects.some(s=>s.id===d.id);
+      const el=document.createElement('div');el.className='def-item'+(isSel?' sel':'');
+      el.innerHTML=`<div class="def-dot">${isSel?'✓':''}</div><div style="flex:1"><div class="def-name">${d.nameEN}</div>${d.nameHI?`<div class="def-hi">${d.nameHI}</div>`:''}</div>`;
+      let _ty=0;
+      el.addEventListener('touchstart',e=>{_ty=e.touches[0].clientY;},{passive:true});
+      el.addEventListener('touchend',e=>{if(Math.abs(e.changedTouches[0].clientY-_ty)<8){e.preventDefault();finToggleDef(d);}});
+      el.addEventListener('click',e=>{if(!('ontouchstart' in window))finToggleDef(d);});
+      list.appendChild(el);
+    });
+  });
+  if(!Object.keys(cats).length) list.innerHTML='<div class="d-empty">No defects found</div>';
+  // Update confirm button
+  const n=finSelectedDefects.length;
+  const btn=document.getElementById('fin-bconf');
+  if(btn){btn.disabled=n===0;btn.textContent=n===0?'Select a defect to confirm':`Confirm & Save (${n} defect${n>1?'s':''})`;  }
+}
+function finToggleDef(d){
+  const i=finSelectedDefects.findIndex(s=>s.id===d.id);
+  if(i>=0)finSelectedDefects.splice(i,1);else finSelectedDefects.push(d);
+  const q=document.getElementById('fin-dsrch')?document.getElementById('fin-dsrch').value:'';
+  renderFinDefectList(q);
+}
+async function finConfirmDefect(){
+  if(!finSelectedDefects.length){showToast('Select at least one defect','reject');return;}
+  const combined={
+    nameEN:finSelectedDefects.map(d=>d.nameEN).join(', '),
+    nameHI:finSelectedDefects.map(d=>d.nameHI||d.nameEN).join(', '),
+    category:[...new Set(finSelectedDefects.map(d=>d.category))].join(', ')
+  };
+  finCloseCat();
+  if(_finPendingReinspect){
+    const ri=_finPendingReinspect;_finPendingReinspect=null;
+    const prevStage=finStage;finStage=ri.stage;
+    await finSaveInspection('Reject',combined,ri.lineName,true,ri.qid);
+    finStage=prevStage;
+  } else {
+    await finSaveInspection(finPendingAction,combined,finSelectedLine);
+  }
+}
+
+// ── Save inspection ──
+async function finSaveInspection(result,defect,lineName,isRI=false,queueId=null){
+  document.getElementById('fin-sdot').style.display='block';
+  const now=new Date();
+  const body={
+    style_id:finStyle.styleId,style:finStyle.style||'',
+    color:finStyle.color||'',customer:finStyle.customer||'',
+    stage_name:finStage?finStage.name:'',
+    line_name:lineName||'',
+    result,pieces_count:1,is_reinspection:isRI,
+    inspection_datetime:now.toISOString(),
+    inspection_date:now.toISOString().split('T')[0],
+    checker_name:currentUser.fullName||currentUser.username,
+    checker_username:currentUser.username
+  };
+  if(defect){body.defect_name_en=defect.nameEN;body.defect_name_hi=defect.nameHI||'';body.defect_category=defect.category||'';}
+  try{
+    const saved=await sbPost('finishing_inspections',body);
+    if(result==='Alter'&&!isRI){
+      await sbPost('finishing_alter_queue',{
+        style_id:finStyle.styleId,style:finStyle.style||'',
+        color:finStyle.color||'',customer:finStyle.customer||'',
+        stage_name:finStage?finStage.name:'',
+        line_name:lineName||'',
+        defect_name_en:defect?defect.nameEN:'',
+        pieces_count:1,date_sent:now.toISOString().split('T')[0],
+        status:'Pending',checker_name:currentUser.fullName||currentUser.username,
+        ...(saved?.id?{original_inspection_id:saved.id}:{})
+      });
+      await loadFinAlterQueue();
+    }
+    if(isRI&&queueId){
+      const status=result==='Pass'?'Re-Inspected Pass':'Re-Inspected Reject';
+      try{await sbPatch('finishing_alter_queue',queueId,{status,reinspection_datetime:now.toISOString()});}catch(e){}
+      await loadFinAlterQueue();
+    }
+    document.getElementById('fin-sdot').style.display='none';
+    showToast(`${result==='Pass'?'✅':result==='Alter'?'🟠':'❌'} ${result}!`,
+      result==='Pass'?'pass':result==='Alter'?'alter':'reject');
+    await loadFinStats();
+  }catch(e){
+    document.getElementById('fin-sdot').style.display='none';
+    showToast('Save failed: '+e.message.substring(0,70),'reject');
+    console.error('finSaveInspection error:',e);
+  }
+}
+
+// ── Finishing alter queue ──
+async function loadFinAlterQueue(){
+  try{
+    let path='finishing_alter_queue?status=eq.Pending';
+    if(finStyle)path+=`&style_id=eq.${encodeURIComponent(finStyle.styleId)}`;
+    const recs=await sbGet(path);
+    _finAlterQueue=recs.map(r=>({
+      id:r.id,styleId:r.style_id||'',style:r.style||'',color:r.color||'',
+      stageName:r.stage_name||'',lineName:r.line_name||'',
+      defectEN:r.defect_name_en||'',pieces:r.pieces_count||1,dateSent:r.date_sent||''
+    }));
+    finUpdateQueueUI();
+  }catch(e){console.warn('loadFinAlterQueue error:',e);}
+}
+function finUpdateQueueUI(){
+  const n=_finAlterQueue.length;
+  const strip=document.getElementById('fin-aqstrip');
+  if(strip)strip.style.display=n>0?'flex':'none';
+  const ct=document.getElementById('fin-aqct');if(ct)ct.textContent=n;
+}
+function finOpenQueue(){
+  finRenderQueue();
+  document.getElementById('fin-qov').classList.add('open');
+  document.getElementById('fin-qsh').classList.add('open');
+}
+function finCloseQueue(){
+  document.getElementById('fin-qov').classList.remove('open');
+  document.getElementById('fin-qsh').classList.remove('open');
+}
+function finRenderQueue(){
+  const body=document.getElementById('fin-qbody');
+  if(!_finAlterQueue.length){body.innerHTML='<div class="empty-st"><div class="ei">✅</div>No pending finishing alter pieces</div>';return;}
+  body.innerHTML='';
+  _finAlterQueue.forEach(q=>{
+    const div=document.createElement('div');div.className='q-item';
+    const dt=q.dateSent?new Date(q.dateSent).toLocaleDateString('en-IN'):'—';
+    div.innerHTML=`<div class="q-style">${q.styleId}
+        <span style="background:rgba(15,118,110,0.12);color:var(--teal);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:4px">${q.stageName}</span>
+      </div>
+      <div class="q-meta">Line: ${q.lineName||'—'} · ${q.pieces} pcs · ${dt}</div>
+      <div class="q-defect">${q.defectEN||'—'}</div>
+      <div class="q-acts">
+        <button class="qp" onclick="finReinspect('${q.id}','Pass')">✅ Pass</button>
+        <button class="qr" onclick="finReinspect('${q.id}','Reject')">❌ Reject</button>
+      </div>`;
+    body.appendChild(div);
+  });
+}
+async function finReinspect(qid,result){
+  const q=_finAlterQueue.find(x=>String(x.id)===String(qid));
+  if(!q){showToast('Item not found','reject');return;}
+  finCloseQueue();
+  const qs=finishingStages.find(s=>s.name===q.stageName)||{id:0,name:q.stageName};
+  if(result==='Pass'){
+    const prevStage=finStage;finStage=qs;
+    await finSaveInspection('Pass',null,q.lineName,true,q.id);
+    finStage=prevStage;
+  } else {
+    _finPendingReinspect={qid:q.id,lineName:q.lineName,stage:qs};
+    finPendingAction='Reject';finSelectedLine=q.lineName;finStage=qs;
+    finOpenCat('Reject');
+  }
 }
 
 // ═══════════════════════════════════════════
