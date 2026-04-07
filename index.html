@@ -683,6 +683,29 @@ tr:hover td{background:var(--s2)}
         <div class="s-drop" id="fin-sdd"></div>
       </div>
     </div>
+    <!-- Sewing pcs info bar -->
+    <div id="fin-pcs-bar" style="display:none;background:#f0fdfa;border:1px solid #ccfbf1;border-radius:var(--rs);padding:10px 14px;margin-bottom:12px;display:none">
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);margin-bottom:6px;font-weight:600">SEWING OUTPUT FOR THIS STYLE</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div style="flex:1;text-align:center;background:#fff;border:1px solid var(--bdr);border-radius:var(--rs);padding:8px 4px">
+          <div style="font-size:22px;font-weight:800;color:var(--grn);font-family:'JetBrains Mono',monospace" id="fin-sew-pass">—</div>
+          <div style="font-size:10px;color:var(--t2);letter-spacing:1px;text-transform:uppercase">Sewing ✅</div>
+        </div>
+        <div style="flex:1;text-align:center;background:#fff;border:1px solid var(--bdr);border-radius:var(--rs);padding:8px 4px">
+          <div style="font-size:22px;font-weight:800;color:var(--teal);font-family:'JetBrains Mono',monospace" id="fin-done">—</div>
+          <div style="font-size:10px;color:var(--t2);letter-spacing:1px;text-transform:uppercase">Finished</div>
+        </div>
+        <div style="flex:1;text-align:center;background:#fff;border:1px solid var(--org);border-radius:var(--rs);padding:8px 4px;background:var(--org-d)">
+          <div style="font-size:22px;font-weight:800;color:var(--org);font-family:'JetBrains Mono',monospace" id="fin-remain">—</div>
+          <div style="font-size:10px;color:var(--org);letter-spacing:1px;text-transform:uppercase">Remaining</div>
+        </div>
+      </div>
+    </div>
+    <!-- Sewing lines display -->
+    <div class="card" id="fin-lines-card" style="display:none">
+      <div class="card-title">SEWING LINES FOR THIS STYLE</div>
+      <div id="fin-lines-grid" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px"></div>
+    </div>
     <!-- Stage selector -->
     <div class="card" id="fin-stage-card" style="display:none">
       <div class="card-title">WHICH STAGE ARE YOU DOING?</div>
@@ -1931,9 +1954,10 @@ function exportCSV(){
 // State
 let finStyle=null,finStage=null,finActiveLines=[],_finAlterQueue=[];
 let finishingStages=[],finPendingAction=null,finSelectedLine=null;
-let finSelectedDefects=[],_finPendingReinspect=null,finDdHi=-1;
+let finSelectedCategory=null,finSelectedDefect=null,_finPendingReinspect=null,finDdHi=-1;
+let _finSewPassMap={},_finFinPassMap={};   // styleId → total pcs
 
-// Consistent line color from palette (fallback if no color in DB)
+// Line colour palette (fallback)
 const FIN_PALETTE=['#0f766e','#0369a1','#7c3aed','#b45309','#be123c','#0891b2','#4d7c0f','#9333ea','#c2410c','#1d4ed8'];
 function getLineColor(ln){
   const lo=allLines.find(l=>l.lineName===ln);
@@ -1945,8 +1969,22 @@ function getLineColor(ln){
 async function loadFinishingStages(){
   try{
     const recs=await sbGet('finishing_stages?is_active=eq.true&order=order_no.asc');
-    finishingStages=recs.map(r=>({id:r.id,name:r.name||r.stage_name||'Stage',sortOrder:r.order_no||r.sort_order||99}));
+    finishingStages=recs.map(r=>({id:r.id,name:r.name||r.stage_name||'Stage',sortOrder:r.order_no||99}));
   }catch(e){console.warn('finishing_stages load failed:',e);finishingStages=[];}
+}
+
+// Load sewing pass counts and finishing pass counts per style
+async function loadFinPassMaps(){
+  try{
+    const [sewRows,finRows]=await Promise.all([
+      sbGet('qc_inspections?result=eq.Pass&is_alter_reinspection=eq.false&select=style_id,pieces_count'),
+      sbGet('finishing_inspections?result=eq.Pass&select=style_id,pieces_count')
+    ]);
+    _finSewPassMap={};
+    sewRows.forEach(r=>{const id=r.style_id;if(id)_finSewPassMap[id]=(_finSewPassMap[id]||0)+(r.pieces_count||1);});
+    _finFinPassMap={};
+    finRows.forEach(r=>{const id=r.style_id;if(id)_finFinPassMap[id]=(_finFinPassMap[id]||0)+(r.pieces_count||1);});
+  }catch(e){console.warn('loadFinPassMaps error:',e);}
 }
 
 function initFinishingScreen(){
@@ -1954,10 +1992,9 @@ function initFinishingScreen(){
   if(el)el.textContent=currentUser.fullName||currentUser.username;
   document.getElementById('fin-ssrch').value='';
   finStyle=null;finStage=null;finSelectedLine=null;
-  document.getElementById('fin-stage-card').style.display='none';
-  document.getElementById('fin-stats-card').style.display='none';
-  document.getElementById('fin-action-card').style.display='none';
-  document.getElementById('fin-aqstrip').style.display='none';
+  ['fin-pcs-bar','fin-lines-card','fin-stage-card','fin-stats-card','fin-action-card','fin-aqstrip']
+    .forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+  loadFinPassMaps();
   loadFinAlterQueue();
 }
 
@@ -1967,18 +2004,29 @@ function finCloseStyleDD(){document.getElementById('fin-sdd').classList.remove('
 function finFilterStyle(){
   const q=document.getElementById('fin-ssrch').value.trim().toLowerCase();
   const dd=document.getElementById('fin-sdd');dd.innerHTML='';finDdHi=-1;
-  const filtered=q?allOrders.filter(o=>
+  // Only show styles that have sewing passes AND still have remaining pcs
+  const eligible=allOrders.filter(o=>{
+    const sew=_finSewPassMap[o.styleId]||0;
+    const fin=_finFinPassMap[o.styleId]||0;
+    return sew>fin; // remaining work exists
+  });
+  const pool=eligible.length?eligible:allOrders; // fallback: show all if maps not loaded yet
+  const filtered=q?pool.filter(o=>
     o.styleId.toLowerCase().includes(q)||o.style.toLowerCase().includes(q)||
     o.color.toLowerCase().includes(q)||o.customer.toLowerCase().includes(q)
-  ):allOrders.slice(0,60);
-  if(!filtered.length){dd.innerHTML='<div class="d-empty">No styles found</div>';dd.classList.add('open');return;}
+  ):pool.slice(0,60);
+  if(!filtered.length){dd.innerHTML='<div class="d-empty">No styles with pending finishing work</div>';dd.classList.add('open');return;}
   filtered.forEach(o=>{
+    const sew=_finSewPassMap[o.styleId]||0;
+    const fin=_finFinPassMap[o.styleId]||0;
+    const rem=sew-fin;
     const div=document.createElement('div');div.className='d-item';
     const hl=q?o.styleId.replace(new RegExp(`(${q})`,'gi'),'<mark>$1</mark>'):o.styleId;
     div.innerHTML=`<div class="dm">${hl}</div>
-      <div class="ds" style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="ds" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:3px">
         <span style="background:rgba(124,58,237,0.12);color:var(--pur);border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700">${o.color||''}</span>
         <span style="color:var(--t2)">${o.customer}</span>
+        <span style="background:rgba(217,119,6,0.12);color:var(--org);border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700">Rem: ${rem} pcs</span>
       </div>`;
     let ty=0;
     div.addEventListener('touchstart',e=>{ty=e.touches[0].clientY;},{passive:true});
@@ -2010,24 +2058,51 @@ async function onFinStyleSelected(){
   if(!finStyle)return;
   finStage=null;
   document.getElementById('fin-stage-info').textContent='';
-  document.getElementById('fin-stage-card').style.display='block';
   document.getElementById('fin-stats-card').style.display='none';
   document.getElementById('fin-action-card').style.display='none';
-  renderFinStages();
-  // Load lines for this style (for line picker)
+
+  // Pcs info bar
+  const sew=_finSewPassMap[finStyle.styleId]||0;
+  const fin=_finFinPassMap[finStyle.styleId]||0;
+  const rem=Math.max(0,sew-fin);
+  document.getElementById('fin-sew-pass').textContent=sew||'—';
+  document.getElementById('fin-done').textContent=fin||'0';
+  document.getElementById('fin-remain').textContent=rem||'0';
+  document.getElementById('fin-pcs-bar').style.display='block';
+
+  // Sewing lines
   const _lr=finStyle.linesRaw||'';
   let sl=[];
   try{sl=(_lr.trim().startsWith('[')?JSON.parse(_lr):_lr.split(',')).map(s=>s.trim()).filter(Boolean);}catch(e){sl=[];}
   finActiveLines=sl.length?sl.filter(ln=>allLines.find(l=>l.lineName===ln)):allLines.map(l=>l.lineName);
+  renderFinLines();
+
+  // Stage card & alter queue
+  document.getElementById('fin-stage-card').style.display='block';
+  renderFinStages();
   await loadFinAlterQueue();
+}
+
+// ── Lines display (always visible after style selected) ──
+function renderFinLines(){
+  const grid=document.getElementById('fin-lines-grid');grid.innerHTML='';
+  const lines=finActiveLines.length?finActiveLines:allLines.map(l=>l.lineName);
+  const isSingle=lines.length===1;
+  lines.forEach(ln=>{
+    const lo=allLines.find(l=>l.lineName===ln);
+    const box=document.createElement('div');
+    box.style.cssText=`background:${getLineColor(ln)};border-radius:12px;padding:10px 14px;color:#fff;min-width:70px;text-align:center;position:relative;${isSingle?'border:3px solid #fff;box-shadow:0 0 0 2px '+getLineColor(ln):''}`;
+    box.innerHTML=`${isSingle?'<div style="font-size:10px;opacity:.8;margin-bottom:2px">✓ AUTO</div>':'<div style="font-size:10px;opacity:.7;margin-bottom:2px">'+(lo&&lo.floor?lo.floor:'')+'</div>'}
+      <div style="font-size:15px;font-weight:800;letter-spacing:.5px">${ln}</div>`;
+    grid.appendChild(box);
+  });
+  document.getElementById('fin-lines-card').style.display='block';
 }
 
 // ── Stages ──
 function renderFinStages(){
   const cont=document.getElementById('fin-stage-btns');cont.innerHTML='';
-  if(!finishingStages.length){
-    cont.innerHTML='<span style="color:var(--t2);font-size:13px">No stages configured — add them in finishing_stages table</span>';return;
-  }
+  if(!finishingStages.length){cont.innerHTML='<span style="color:var(--t2);font-size:13px">No stages configured</span>';return;}
   finishingStages.forEach(s=>{
     const btn=document.createElement('button');
     btn.className='fin-stage-btn'+(finStage&&finStage.id===s.id?' active':'');
@@ -2055,6 +2130,12 @@ async function loadFinStats(){
     document.getElementById('fin-sp').textContent=p;
     document.getElementById('fin-sa').textContent=a;
     document.getElementById('fin-sr').textContent=r;
+    // Also refresh pcs bar
+    const finTotal=(_finFinPassMap[finStyle.styleId]||0)+p;
+    _finFinPassMap[finStyle.styleId]=finTotal;
+    const sew=_finSewPassMap[finStyle.styleId]||0;
+    document.getElementById('fin-done').textContent=finTotal;
+    document.getElementById('fin-remain').textContent=Math.max(0,sew-finTotal);
   }catch(e){console.warn('loadFinStats error:',e);}
 }
 
@@ -2066,7 +2147,7 @@ function finDoAction(act){
   if(act==='Pass'){
     finSaveInspection('Pass',null,null);
   } else {
-    // Alter or Reject: need sewing line selection + defect
+    // Alter or Reject: show line picker if multiple lines, then category+defect sheet
     if(finActiveLines.length===1){
       finSelectedLine=finActiveLines[0];
       finOpenCat(act);
@@ -2100,102 +2181,135 @@ function finCloseLine(){
   document.getElementById('fin-lsh').classList.remove('open');
 }
 
-// ── Defect sheet ──
+// ── Category + Defect sheet ──
 function finOpenCat(act){
-  finSelectedDefects=[];
-  document.getElementById('fin-csh-title').textContent=act==='Alter'?'🟠 Select Defect — Alter':'❌ Select Defect — Reject';
+  finSelectedCategory=null;finSelectedDefect=null;
+  document.getElementById('fin-csh-title').textContent=act==='Alter'?'🟠 Alter — Select Category':'❌ Reject — Select Category';
   document.getElementById('fin-csh-sub').textContent=`${finStyle?finStyle.styleId:''} · ${finSelectedLine||''}`;
-  // Build body: search + list + confirm
   const body=document.getElementById('fin-cbody');
-  body.innerHTML=`<div class="def-search"><span class="si">🔍</span><input type="text" id="fin-dsrch" placeholder="Search defect..." autocorrect="off" autocomplete="off" oninput="renderFinDefectList(this.value)" style="width:100%;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);font-family:inherit;font-size:15px;padding:11px 16px 11px 38px;outline:none"></div>
-    <div id="fin-dlist"></div>
-    <div style="padding:14px 0 4px"><button class="btn-confirm" id="fin-bconf" disabled onclick="finConfirmDefect()">Select a defect to confirm</button></div>`;
-  renderFinDefectList('');
+  // Get distinct categories from defect_master
+  const cats=[...new Set(allDefects.map(d=>d.category).filter(Boolean))].sort();
+  // Category pills
+  const pillHtml=cats.map(c=>`<button class="fin-cat-btn" id="fcat-${c.replace(/\s/g,'_')}" onclick="finSelectCategory('${c}')">${c}</button>`).join('');
+  body.innerHTML=`
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);margin-bottom:8px;font-weight:600">SELECT CATEGORY <span style="color:var(--red)">*</span> required</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${pillHtml}</div>
+    </div>
+    <div id="fin-def-section" style="display:none">
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);margin-bottom:8px;font-weight:600">SELECT DEFECT <span style="color:var(--t3)">(optional)</span></div>
+      <div class="def-search"><span class="si">🔍</span><input type="text" id="fin-dsrch" placeholder="Search defect..." autocorrect="off" autocomplete="off" oninput="renderFinDefectList(this.value)" style="width:100%;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);font-family:inherit;font-size:15px;padding:11px 16px 11px 38px;outline:none"></div>
+      <div id="fin-dlist"></div>
+    </div>
+    <div style="padding:14px 0 4px"><button class="btn-confirm" id="fin-bconf" disabled onclick="finConfirmDefect()">Select a category to continue</button></div>`;
   document.getElementById('fin-cov').classList.add('open');
   document.getElementById('fin-csh').classList.add('open');
 }
 function finCloseCat(){
   document.getElementById('fin-cov').classList.remove('open');
   document.getElementById('fin-csh').classList.remove('open');
-  finSelectedDefects=[];_finPendingReinspect=null;
+  finSelectedCategory=null;finSelectedDefect=null;_finPendingReinspect=null;
+}
+function finSelectCategory(cat){
+  finSelectedCategory=cat;finSelectedDefect=null;
+  // Highlight selected category pill
+  document.querySelectorAll('.fin-cat-btn').forEach(b=>b.classList.remove('active'));
+  const pid=`fcat-${cat.replace(/\s/g,'_')}`;
+  const pb=document.getElementById(pid);if(pb)pb.classList.add('active');
+  // Show defect section and render
+  document.getElementById('fin-def-section').style.display='block';
+  const srch=document.getElementById('fin-dsrch');if(srch)srch.value='';
+  renderFinDefectList('');
+  // Enable confirm button (category alone is enough)
+  const btn=document.getElementById('fin-bconf');
+  if(btn){btn.disabled=false;btn.textContent=`Save as ${cat} (no specific defect)`;}
 }
 function renderFinDefectList(q=''){
   const list=document.getElementById('fin-dlist');if(!list)return;
   list.innerHTML='';
   const fl=q.toLowerCase();
-  const cats={};
-  allDefects.filter(d=>!fl||d.nameEN.toLowerCase().includes(fl)||(d.nameHI&&d.nameHI.includes(fl)))
-    .forEach(d=>{if(!cats[d.category])cats[d.category]=[];cats[d.category].push(d);});
-  Object.entries(cats).forEach(([cat,defs])=>{
-    const ce=document.createElement('div');ce.className='def-cat';ce.textContent=cat;list.appendChild(ce);
-    defs.forEach(d=>{
-      const isSel=finSelectedDefects.some(s=>s.id===d.id);
-      const el=document.createElement('div');el.className='def-item'+(isSel?' sel':'');
-      el.innerHTML=`<div class="def-dot">${isSel?'✓':''}</div><div style="flex:1"><div class="def-name">${d.nameEN}</div>${d.nameHI?`<div class="def-hi">${d.nameHI}</div>`:''}</div>`;
-      let _ty=0;
-      el.addEventListener('touchstart',e=>{_ty=e.touches[0].clientY;},{passive:true});
-      el.addEventListener('touchend',e=>{if(Math.abs(e.changedTouches[0].clientY-_ty)<8){e.preventDefault();finToggleDef(d);}});
-      el.addEventListener('click',e=>{if(!('ontouchstart' in window))finToggleDef(d);});
-      list.appendChild(el);
-    });
+  // Filter defects by selected category + search query
+  const defs=allDefects.filter(d=>
+    d.category===finSelectedCategory&&
+    (!fl||d.nameEN.toLowerCase().includes(fl)||(d.nameHI&&d.nameHI.includes(fl)))
+  );
+  if(!defs.length){list.innerHTML='<div class="d-empty">No defects found</div>';return;}
+  defs.forEach(d=>{
+    const isSel=finSelectedDefect&&finSelectedDefect.id===d.id;
+    const el=document.createElement('div');el.className='def-item'+(isSel?' sel':'');
+    el.innerHTML=`<div class="def-dot">${isSel?'✓':''}</div><div style="flex:1"><div class="def-name">${d.nameEN}</div>${d.nameHI?`<div class="def-hi">${d.nameHI}</div>`:''}</div>`;
+    let _ty=0;
+    el.addEventListener('touchstart',e=>{_ty=e.touches[0].clientY;},{passive:true});
+    el.addEventListener('touchend',e=>{if(Math.abs(e.changedTouches[0].clientY-_ty)<8){e.preventDefault();finPickDefect(d);}});
+    el.addEventListener('click',e=>{if(!('ontouchstart' in window))finPickDefect(d);});
+    list.appendChild(el);
   });
-  if(!Object.keys(cats).length) list.innerHTML='<div class="d-empty">No defects found</div>';
-  // Update confirm button
-  const n=finSelectedDefects.length;
-  const btn=document.getElementById('fin-bconf');
-  if(btn){btn.disabled=n===0;btn.textContent=n===0?'Select a defect to confirm':`Confirm & Save (${n} defect${n>1?'s':''})`;  }
 }
-function finToggleDef(d){
-  const i=finSelectedDefects.findIndex(s=>s.id===d.id);
-  if(i>=0)finSelectedDefects.splice(i,1);else finSelectedDefects.push(d);
+function finPickDefect(d){
+  // Toggle: tap selected defect to deselect
+  finSelectedDefect=(finSelectedDefect&&finSelectedDefect.id===d.id)?null:d;
   const q=document.getElementById('fin-dsrch')?document.getElementById('fin-dsrch').value:'';
   renderFinDefectList(q);
+  // Update confirm button text
+  const btn=document.getElementById('fin-bconf');
+  if(btn){
+    btn.disabled=false;
+    btn.textContent=finSelectedDefect
+      ?`Save: ${finSelectedCategory} → ${finSelectedDefect.nameEN}`
+      :`Save as ${finSelectedCategory} (no specific defect)`;
+  }
 }
 async function finConfirmDefect(){
-  if(!finSelectedDefects.length){showToast('Select at least one defect','reject');return;}
-  const combined={
-    nameEN:finSelectedDefects.map(d=>d.nameEN).join(', '),
-    nameHI:finSelectedDefects.map(d=>d.nameHI||d.nameEN).join(', '),
-    category:[...new Set(finSelectedDefects.map(d=>d.category))].join(', ')
+  if(!finSelectedCategory){showToast('Select a category first','reject');return;}
+  const defectData={
+    category:finSelectedCategory,
+    nameEN:finSelectedDefect?finSelectedDefect.nameEN:'',
+    nameHI:finSelectedDefect?finSelectedDefect.nameHI||'':''
   };
   finCloseCat();
   if(_finPendingReinspect){
     const ri=_finPendingReinspect;_finPendingReinspect=null;
     const prevStage=finStage;finStage=ri.stage;
-    await finSaveInspection('Reject',combined,ri.lineName,true,ri.qid);
+    await finSaveInspection('Reject',defectData,ri.lineName,true,ri.qid);
     finStage=prevStage;
   } else {
-    await finSaveInspection(finPendingAction,combined,finSelectedLine);
+    await finSaveInspection(finPendingAction,defectData,finSelectedLine);
   }
 }
 
-// ── Save inspection ──
+// ── Save inspection — FIXED column names ──
 async function finSaveInspection(result,defect,lineName,isRI=false,queueId=null){
   document.getElementById('fin-sdot').style.display='block';
   const now=new Date();
   const body={
     style_id:finStyle.styleId,style:finStyle.style||'',
-    color:finStyle.color||'',customer:finStyle.customer||'',
+    color:finStyle.color||'',
     stage_name:finStage?finStage.name:'',
     line_name:lineName||'',
     result,pieces_count:1,is_reinspection:isRI,
     inspection_datetime:now.toISOString(),
     inspection_date:now.toISOString().split('T')[0],
-    checker_name:currentUser.fullName||currentUser.username,
-    checker_username:currentUser.username
+    inspector_name:currentUser.fullName||currentUser.username,
+    inspector_username:currentUser.username
   };
-  if(defect){body.defect_name_en=defect.nameEN;body.defect_name_hi=defect.nameHI||'';body.defect_category=defect.category||'';}
+  if(defect&&defect.category){
+    body.defect_category=defect.category;
+    if(defect.nameEN)body.defect_name_en=defect.nameEN;
+    if(defect.nameHI)body.defect_name_hi=defect.nameHI;
+  }
   try{
     const saved=await sbPost('finishing_inspections',body);
     if(result==='Alter'&&!isRI){
       await sbPost('finishing_alter_queue',{
         style_id:finStyle.styleId,style:finStyle.style||'',
-        color:finStyle.color||'',customer:finStyle.customer||'',
+        color:finStyle.color||'',
         stage_name:finStage?finStage.name:'',
         line_name:lineName||'',
+        defect_category:defect?defect.category:'',
         defect_name_en:defect?defect.nameEN:'',
         pieces_count:1,date_sent:now.toISOString().split('T')[0],
-        status:'Pending',checker_name:currentUser.fullName||currentUser.username,
+        status:'Pending',
+        inspector_name:currentUser.fullName||currentUser.username,
         ...(saved?.id?{original_inspection_id:saved.id}:{})
       });
       await loadFinAlterQueue();
@@ -2225,7 +2339,8 @@ async function loadFinAlterQueue(){
     _finAlterQueue=recs.map(r=>({
       id:r.id,styleId:r.style_id||'',style:r.style||'',color:r.color||'',
       stageName:r.stage_name||'',lineName:r.line_name||'',
-      defectEN:r.defect_name_en||'',pieces:r.pieces_count||1,dateSent:r.date_sent||''
+      defectEN:r.defect_name_en||'',defectCat:r.defect_category||'',
+      pieces:r.pieces_count||1,dateSent:r.date_sent||''
     }));
     finUpdateQueueUI();
   }catch(e){console.warn('loadFinAlterQueue error:',e);}
@@ -2252,11 +2367,12 @@ function finRenderQueue(){
   _finAlterQueue.forEach(q=>{
     const div=document.createElement('div');div.className='q-item';
     const dt=q.dateSent?new Date(q.dateSent).toLocaleDateString('en-IN'):'—';
+    const defLabel=q.defectEN?`${q.defectCat} → ${q.defectEN}`:q.defectCat||'—';
     div.innerHTML=`<div class="q-style">${q.styleId}
         <span style="background:rgba(15,118,110,0.12);color:var(--teal);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:4px">${q.stageName}</span>
       </div>
       <div class="q-meta">Line: ${q.lineName||'—'} · ${q.pieces} pcs · ${dt}</div>
-      <div class="q-defect">${q.defectEN||'—'}</div>
+      <div class="q-defect">${defLabel}</div>
       <div class="q-acts">
         <button class="qp" onclick="finReinspect('${q.id}','Pass')">✅ Pass</button>
         <button class="qr" onclick="finReinspect('${q.id}','Reject')">❌ Reject</button>
