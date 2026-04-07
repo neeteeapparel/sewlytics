@@ -722,18 +722,26 @@ tr:hover td{background:var(--s2)}
     <!-- Stats -->
     <div class="card" id="fin-stats-card" style="display:none">
       <div class="card-title">TODAY'S FINDINGS</div>
-      <div class="fin-stats-row">
-        <div class="fin-stat-box" style="background:var(--grn-d)">
-          <div style="font-size:32px;font-weight:700;color:var(--grn)" id="fin-sp">0</div>
-          <div style="font-size:11px;color:var(--t2);letter-spacing:1px;text-transform:uppercase">Pass</div>
+      <div class="big-stats">
+        <div class="big-box pass">
+          <div class="bv" id="fin-sp">0</div>
+          <div class="bl">Pass (Today)</div>
+          <div class="at-val" id="fin-sp-all" style="color:var(--teal)"></div>
         </div>
-        <div class="fin-stat-box" style="background:var(--org-d)">
-          <div style="font-size:32px;font-weight:700;color:var(--org)" id="fin-sa">0</div>
-          <div style="font-size:11px;color:var(--t2);letter-spacing:1px;text-transform:uppercase">Alter</div>
+        <div class="big-box alter">
+          <div class="bv" id="fin-sa">0</div>
+          <div class="bl">Alter (Today)</div>
+          <div class="at-val" id="fin-sa-all" style="color:var(--teal)"></div>
         </div>
-        <div class="fin-stat-box" style="background:var(--red-d)">
-          <div style="font-size:32px;font-weight:700;color:var(--red)" id="fin-sr">0</div>
-          <div style="font-size:11px;color:var(--t2);letter-spacing:1px;text-transform:uppercase">Reject</div>
+        <div class="big-box reject">
+          <div class="bv" id="fin-sr">0</div>
+          <div class="bl">Reject (Today)</div>
+          <div class="at-val" id="fin-sr-all" style="color:var(--teal)"></div>
+        </div>
+        <div class="big-box dhu">
+          <div class="bv" id="fin-dhu">—</div>
+          <div class="bl">DHU% (Today)</div>
+          <div class="at-val" id="fin-dhu-all"></div>
         </div>
       </div>
     </div>
@@ -769,8 +777,13 @@ tr:hover td{background:var(--s2)}
 <div class="overlay" id="fin-cov" onclick="finCloseCat()"></div>
 <div class="sheet" id="fin-csh">
   <div class="sh-handle"></div>
-  <div class="sh-hdr"><div><div class="sh-title" id="fin-csh-title">Select Defect</div><div class="sh-sub" id="fin-csh-sub">—</div></div><button class="btn-back" onclick="finCloseCat()">← Back</button></div>
-  <div class="sh-body" id="fin-cbody"></div>
+  <div class="sh-hdr"><div><div class="sh-title" id="fin-csh-title">Select Category</div><div class="sh-sub" id="fin-csh-sub">—</div></div><button class="btn-back" onclick="finCloseCat()">← Back</button></div>
+  <!-- Fixed category pills — never scrolls -->
+  <div id="fin-cat-area" style="padding:10px 16px 12px;border-bottom:1px solid var(--bdr);flex-shrink:0"></div>
+  <!-- Scrollable defect list -->
+  <div class="sh-body" id="fin-cbody" style="padding-bottom:0"></div>
+  <!-- Fixed confirm button -->
+  <div class="sh-foot" id="fin-cat-foot" style="padding:12px 16px"></div>
 </div>
 
 <script>
@@ -1952,7 +1965,7 @@ function exportCSV(){
 // ═══════════════════════════════════════════
 
 // State
-let finStyle=null,finStage=null,finActiveLines=[],_finAlterQueue=[];
+let finStyle=null,finStage=null,finStageLocked=false,finActiveLines=[],_finAlterQueue=[];
 let finishingStages=[],finPendingAction=null,finSelectedLine=null;
 let finSelectedCategory=null,finSelectedDefect=null,_finPendingReinspect=null,finDdHi=-1;
 let _finSewPassMap={},_finFinPassMap={};   // styleId → total pcs
@@ -1991,7 +2004,8 @@ function initFinishingScreen(){
   const el=document.getElementById('fin-uname');
   if(el)el.textContent=currentUser.fullName||currentUser.username;
   document.getElementById('fin-ssrch').value='';
-  finStyle=null;finStage=null;finSelectedLine=null;
+  document.getElementById('fin-ssrch').classList.remove('has-val');
+  finStyle=null;finStage=null;finStageLocked=false;finSelectedLine=null;
   ['fin-pcs-bar','fin-lines-card','fin-stage-card','fin-stats-card','fin-action-card','fin-aqstrip']
     .forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   loadFinPassMaps();
@@ -2056,7 +2070,8 @@ document.addEventListener('click',e=>{
 
 async function onFinStyleSelected(){
   if(!finStyle)return;
-  finStage=null;
+  // Reset stage lock on new style selection
+  finStage=null;finStageLocked=false;
   document.getElementById('fin-stage-info').textContent='';
   document.getElementById('fin-stats-card').style.display='none';
   document.getElementById('fin-action-card').style.display='none';
@@ -2103,6 +2118,14 @@ function renderFinLines(){
 function renderFinStages(){
   const cont=document.getElementById('fin-stage-btns');cont.innerHTML='';
   if(!finishingStages.length){cont.innerHTML='<span style="color:var(--t2);font-size:13px">No stages configured</span>';return;}
+  if(finStageLocked&&finStage){
+    // Show locked state — stage name + change button
+    cont.innerHTML=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="background:var(--teal);color:#fff;border-radius:20px;padding:8px 20px;font-size:14px;font-weight:700">✓ ${finStage.name}</span>
+      <button onclick="finUnlockStage()" style="background:none;border:1px solid var(--bdr);border-radius:20px;color:var(--t2);font-family:inherit;font-size:12px;padding:6px 14px;cursor:pointer;">✕ Change Stage</button>
+    </div>`;
+    return;
+  }
   finishingStages.forEach(s=>{
     const btn=document.createElement('button');
     btn.className='fin-stage-btn'+(finStage&&finStage.id===s.id?' active':'');
@@ -2111,31 +2134,50 @@ function renderFinStages(){
   });
 }
 function finSelectStage(s){
-  finStage=s;
+  finStage=s;finStageLocked=true;
   document.getElementById('fin-stage-info').textContent=s.name;
   renderFinStages();
   document.getElementById('fin-stats-card').style.display='block';
   document.getElementById('fin-action-card').style.display='block';
   loadFinStats();
 }
+function finUnlockStage(){
+  if(!confirm('Change stage? Today\'s stats will reload for the new stage.'))return;
+  finStageLocked=false;finStage=null;
+  document.getElementById('fin-stage-info').textContent='';
+  document.getElementById('fin-stats-card').style.display='none';
+  document.getElementById('fin-action-card').style.display='none';
+  renderFinStages();
+}
 
-// ── Stats ──
+// ── Stats (today + all-time) ──
 async function loadFinStats(){
   if(!finStyle||!finStage)return;
   const today=new Date().toISOString().split('T')[0];
   try{
-    const rows=await sbGet(`finishing_inspections?style_id=eq.${encodeURIComponent(finStyle.styleId)}&stage_name=eq.${encodeURIComponent(finStage.name)}&inspection_date=eq.${today}&select=result,pieces_count`);
-    let p=0,a=0,r=0;
-    rows.forEach(x=>{const pcs=x.pieces_count||1;if(x.result==='Pass')p+=pcs;else if(x.result==='Alter')a+=pcs;else if(x.result==='Reject')r+=pcs;});
-    document.getElementById('fin-sp').textContent=p;
-    document.getElementById('fin-sa').textContent=a;
-    document.getElementById('fin-sr').textContent=r;
-    // Also refresh pcs bar
-    const finTotal=(_finFinPassMap[finStyle.styleId]||0)+p;
-    _finFinPassMap[finStyle.styleId]=finTotal;
+    // Load all records for this style+stage (to split today vs all-time)
+    const rows=await sbGet(`finishing_inspections?style_id=eq.${encodeURIComponent(finStyle.styleId)}&stage_name=eq.${encodeURIComponent(finStage.name)}&select=result,pieces_count,inspection_date`);
+    let pT=0,aT=0,rT=0,pA=0,aA=0,rA=0;
+    rows.forEach(x=>{
+      const pcs=x.pieces_count||1;
+      const isToday=x.inspection_date===today;
+      if(x.result==='Pass'){pA+=pcs;if(isToday)pT+=pcs;}
+      else if(x.result==='Alter'){aA+=pcs;if(isToday)aT+=pcs;}
+      else if(x.result==='Reject'){rA+=pcs;if(isToday)rT+=pcs;}
+    });
+    const totT=pT+aT+rT,totA=pA+aA+rA;
+    const dhuT=totT>0?(((aT+rT)/totT)*100).toFixed(1)+'%':'—';
+    const dhuA=totA>0?(((aA+rA)/totA)*100).toFixed(1)+'%':'—';
+    const _s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    _s('fin-sp',pT);_s('fin-sa',aT);_s('fin-sr',rT);_s('fin-dhu',dhuT);
+    _s('fin-sp-all',pA?`All: ${pA}`:'');
+    _s('fin-sa-all',aA?`All: ${aA}`:'');
+    _s('fin-sr-all',rA?`All: ${rA}`:'');
+    _s('fin-dhu-all',dhuA!=='—'?`All: ${dhuA}`:'');
+    // Refresh pcs bar using all-time pass count
+    _finFinPassMap[finStyle.styleId]=pA;
     const sew=_finSewPassMap[finStyle.styleId]||0;
-    document.getElementById('fin-done').textContent=finTotal;
-    document.getElementById('fin-remain').textContent=Math.max(0,sew-finTotal);
+    _s('fin-done',pA);_s('fin-remain',Math.max(0,sew-pA));
   }catch(e){console.warn('loadFinStats error:',e);}
 }
 
@@ -2143,11 +2185,18 @@ async function loadFinStats(){
 function finDoAction(act){
   if(!finStyle){showToast('Select a style first','reject');return;}
   if(!finStage){showToast('Select a stage first','reject');return;}
+  // Block if no remaining sewing pcs for Pass
+  if(act==='Pass'){
+    const sew=_finSewPassMap[finStyle.styleId]||0;
+    const fin=_finFinPassMap[finStyle.styleId]||0;
+    if(sew>0&&fin>=sew){
+      showToast(`All ${sew} sewing pcs already finished!`,'reject');return;
+    }
+  }
   finPendingAction=act;_finPendingReinspect=null;
   if(act==='Pass'){
     finSaveInspection('Pass',null,null);
   } else {
-    // Alter or Reject: show line picker if multiple lines, then category+defect sheet
     if(finActiveLines.length===1){
       finSelectedLine=finActiveLines[0];
       finOpenCat(act);
@@ -2186,22 +2235,22 @@ function finOpenCat(act){
   finSelectedCategory=null;finSelectedDefect=null;
   document.getElementById('fin-csh-title').textContent=act==='Alter'?'🟠 Alter — Select Category':'❌ Reject — Select Category';
   document.getElementById('fin-csh-sub').textContent=`${finStyle?finStyle.styleId:''} · ${finSelectedLine||''}`;
-  const body=document.getElementById('fin-cbody');
-  // Get distinct categories from defect_master
+  // Get distinct categories from allDefects
   const cats=[...new Set(allDefects.map(d=>d.category).filter(Boolean))].sort();
-  // Category pills
-  const pillHtml=cats.map(c=>`<button class="fin-cat-btn" id="fcat-${c.replace(/\s/g,'_')}" onclick="finSelectCategory('${c}')">${c}</button>`).join('');
-  body.innerHTML=`
-    <div style="margin-bottom:12px">
-      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);margin-bottom:8px;font-weight:600">SELECT CATEGORY <span style="color:var(--red)">*</span> required</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">${pillHtml}</div>
-    </div>
-    <div id="fin-def-section" style="display:none">
-      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);margin-bottom:8px;font-weight:600">SELECT DEFECT <span style="color:var(--t3)">(optional)</span></div>
-      <div class="def-search"><span class="si">🔍</span><input type="text" id="fin-dsrch" placeholder="Search defect..." autocorrect="off" autocomplete="off" oninput="renderFinDefectList(this.value)" style="width:100%;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);font-family:inherit;font-size:15px;padding:11px 16px 11px 38px;outline:none"></div>
-      <div id="fin-dlist"></div>
-    </div>
-    <div style="padding:14px 0 4px"><button class="btn-confirm" id="fin-bconf" disabled onclick="finConfirmDefect()">Select a category to continue</button></div>`;
+  // Fixed category area (never scrolls)
+  const catArea=document.getElementById('fin-cat-area');
+  catArea.innerHTML=`<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);margin-bottom:8px;font-weight:600">CATEGORY <span style="color:var(--red)">★</span> required</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">${cats.map(c=>`<button class="fin-cat-btn" id="fcat-${c.replace(/[^a-zA-Z0-9]/g,'_')}" onclick="finSelectCategory('${c}')">${c}</button>`).join('')}</div>`;
+  // Scrollable defect list (empty until category tapped)
+  const body=document.getElementById('fin-cbody');
+  body.innerHTML=`<div id="fin-def-section" style="display:none">
+    <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);margin-bottom:8px;font-weight:600;padding-top:4px">DEFECT <span style="color:var(--t3)">(optional)</span></div>
+    <div class="def-search"><span class="si">🔍</span><input type="text" id="fin-dsrch" placeholder="Search defect..." autocorrect="off" autocomplete="off" oninput="renderFinDefectList(this.value)" style="width:100%;background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);font-family:inherit;font-size:15px;padding:11px 16px 11px 38px;outline:none"></div>
+    <div id="fin-dlist"></div>
+  </div>`;
+  // Fixed confirm button at bottom
+  const foot=document.getElementById('fin-cat-foot');
+  foot.innerHTML=`<button class="btn-confirm" id="fin-bconf" disabled onclick="finConfirmDefect()">Select a category to continue</button>`;
   document.getElementById('fin-cov').classList.add('open');
   document.getElementById('fin-csh').classList.add('open');
 }
@@ -2212,28 +2261,21 @@ function finCloseCat(){
 }
 function finSelectCategory(cat){
   finSelectedCategory=cat;finSelectedDefect=null;
-  // Highlight selected category pill
   document.querySelectorAll('.fin-cat-btn').forEach(b=>b.classList.remove('active'));
-  const pid=`fcat-${cat.replace(/\s/g,'_')}`;
-  const pb=document.getElementById(pid);if(pb)pb.classList.add('active');
-  // Show defect section and render
+  const pb=document.getElementById(`fcat-${cat.replace(/[^a-zA-Z0-9]/g,'_')}`);if(pb)pb.classList.add('active');
   document.getElementById('fin-def-section').style.display='block';
   const srch=document.getElementById('fin-dsrch');if(srch)srch.value='';
   renderFinDefectList('');
-  // Enable confirm button (category alone is enough)
   const btn=document.getElementById('fin-bconf');
-  if(btn){btn.disabled=false;btn.textContent=`Save as ${cat} (no specific defect)`;}
+  if(btn){btn.disabled=false;btn.textContent=`Save — ${cat} (no specific defect)`;}
 }
 function renderFinDefectList(q=''){
   const list=document.getElementById('fin-dlist');if(!list)return;
   list.innerHTML='';
   const fl=q.toLowerCase();
-  // Filter defects by selected category + search query
-  const defs=allDefects.filter(d=>
-    d.category===finSelectedCategory&&
-    (!fl||d.nameEN.toLowerCase().includes(fl)||(d.nameHI&&d.nameHI.includes(fl)))
-  );
-  if(!defs.length){list.innerHTML='<div class="d-empty">No defects found</div>';return;}
+  const defs=allDefects.filter(d=>d.category===finSelectedCategory&&
+    (!fl||d.nameEN.toLowerCase().includes(fl)||(d.nameHI&&d.nameHI.includes(fl))));
+  if(!defs.length){list.innerHTML='<div class="d-empty">No defects in this category</div>';return;}
   defs.forEach(d=>{
     const isSel=finSelectedDefect&&finSelectedDefect.id===d.id;
     const el=document.createElement('div');el.className='def-item'+(isSel?' sel':'');
@@ -2246,18 +2288,13 @@ function renderFinDefectList(q=''){
   });
 }
 function finPickDefect(d){
-  // Toggle: tap selected defect to deselect
   finSelectedDefect=(finSelectedDefect&&finSelectedDefect.id===d.id)?null:d;
   const q=document.getElementById('fin-dsrch')?document.getElementById('fin-dsrch').value:'';
   renderFinDefectList(q);
-  // Update confirm button text
   const btn=document.getElementById('fin-bconf');
-  if(btn){
-    btn.disabled=false;
-    btn.textContent=finSelectedDefect
-      ?`Save: ${finSelectedCategory} → ${finSelectedDefect.nameEN}`
-      :`Save as ${finSelectedCategory} (no specific defect)`;
-  }
+  if(btn)btn.textContent=finSelectedDefect
+    ?`Save — ${finSelectedCategory} · ${finSelectedDefect.nameEN}`
+    :`Save — ${finSelectedCategory} (no specific defect)`;
 }
 async function finConfirmDefect(){
   if(!finSelectedCategory){showToast('Select a category first','reject');return;}
@@ -2300,13 +2337,14 @@ async function finSaveInspection(result,defect,lineName,isRI=false,queueId=null)
   try{
     const saved=await sbPost('finishing_inspections',body);
     if(result==='Alter'&&!isRI){
+      // defect_name_en stores "Category — Defect" or just "Category" if no defect picked
+      const aqDefect=defect?(defect.nameEN?`${defect.category} — ${defect.nameEN}`:defect.category||''):'';
       await sbPost('finishing_alter_queue',{
         style_id:finStyle.styleId,style:finStyle.style||'',
         color:finStyle.color||'',
         stage_name:finStage?finStage.name:'',
         line_name:lineName||'',
-        defect_category:defect?defect.category:'',
-        defect_name_en:defect?defect.nameEN:'',
+        defect_name_en:aqDefect,
         pieces_count:1,date_sent:now.toISOString().split('T')[0],
         status:'Pending',
         inspector_name:currentUser.fullName||currentUser.username,
@@ -2367,7 +2405,7 @@ function finRenderQueue(){
   _finAlterQueue.forEach(q=>{
     const div=document.createElement('div');div.className='q-item';
     const dt=q.dateSent?new Date(q.dateSent).toLocaleDateString('en-IN'):'—';
-    const defLabel=q.defectEN?`${q.defectCat} → ${q.defectEN}`:q.defectCat||'—';
+    const defLabel=q.defectEN||'—';
     div.innerHTML=`<div class="q-style">${q.styleId}
         <span style="background:rgba(15,118,110,0.12);color:var(--teal);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:4px">${q.stageName}</span>
       </div>
