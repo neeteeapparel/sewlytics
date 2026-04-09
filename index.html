@@ -444,12 +444,20 @@ tr:hover td{background:var(--s2)}
     <div class="banner" id="banner"></div>
 
     <!-- PIECE COUNTER -->
-    <div class="pcs-row">
-      <div class="pcs-lbl" id="lpcs">Pieces</div>
-      <div class="ctr">
-        <button class="ctr-btn" onclick="chgPcs(-1)">−</button>
-        <div class="ctr-val" id="pcsv">1</div>
-        <button class="ctr-btn" onclick="chgPcs(1)">+</button>
+    <div class="pcs-row" style="gap:12px;align-items:stretch">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:5px;font-weight:600">TOP DEFECTS</div>
+        <div id="top-def-list" style="display:flex;flex-direction:column;gap:3px">
+          <div style="font-size:12px;color:var(--t3)">Select style</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div class="pcs-lbl" id="lpcs" style="margin-bottom:4px">Pieces</div>
+        <div class="ctr">
+          <button class="ctr-btn" onclick="chgPcs(-1)">−</button>
+          <div class="ctr-val" id="pcsv">1</div>
+          <button class="ctr-btn" onclick="chgPcs(1)">+</button>
+        </div>
       </div>
     </div>
 
@@ -683,19 +691,19 @@ tr:hover td{background:var(--s2)}
         <div class="s-drop" id="fin-sdd"></div>
       </div>
     </div>
-    <!-- Sewing pcs info bar -->
-    <div id="fin-pcs-bar" style="display:none;background:#f0fdfa;border:1px solid #ccfbf1;border-radius:var(--rs);padding:10px 14px;margin-bottom:12px;display:none">
-      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);margin-bottom:6px;font-weight:600">SEWING OUTPUT FOR THIS STYLE</div>
+    <!-- Pcs info bar -->
+    <div id="fin-pcs-bar" style="display:none;background:#f0fdfa;border:1px solid #ccfbf1;border-radius:var(--rs);padding:10px 14px;margin-bottom:12px">
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);margin-bottom:6px;font-weight:600">FINISHING PROGRESS</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <div style="flex:1;text-align:center;background:#fff;border:1px solid var(--bdr);border-radius:var(--rs);padding:8px 4px">
           <div style="font-size:22px;font-weight:800;color:var(--grn);font-family:'JetBrains Mono',monospace" id="fin-sew-pass">—</div>
-          <div style="font-size:10px;color:var(--t2);letter-spacing:1px;text-transform:uppercase">Sewing ✅</div>
+          <div id="fin-input-label" style="font-size:10px;color:var(--t2);letter-spacing:1px;text-transform:uppercase">Sewing ✅</div>
         </div>
         <div style="flex:1;text-align:center;background:#fff;border:1px solid var(--bdr);border-radius:var(--rs);padding:8px 4px">
           <div style="font-size:22px;font-weight:800;color:var(--teal);font-family:'JetBrains Mono',monospace" id="fin-done">—</div>
-          <div style="font-size:10px;color:var(--t2);letter-spacing:1px;text-transform:uppercase">Finished</div>
+          <div id="fin-done-label" style="font-size:10px;color:var(--t2);letter-spacing:1px;text-transform:uppercase">Finished</div>
         </div>
-        <div style="flex:1;text-align:center;background:#fff;border:1px solid var(--org);border-radius:var(--rs);padding:8px 4px;background:var(--org-d)">
+        <div style="flex:1;text-align:center;background:var(--org-d);border:1px solid var(--org);border-radius:var(--rs);padding:8px 4px">
           <div style="font-size:22px;font-weight:800;color:var(--org);font-family:'JetBrains Mono',monospace" id="fin-remain">—</div>
           <div style="font-size:10px;color:var(--org);letter-spacing:1px;text-transform:uppercase">Remaining</div>
         </div>
@@ -1126,6 +1134,7 @@ function onStyleSelected(){
     lsel.value=al;onLineChange();
   } else if(lines.length===1){lsel.value=lines[0];onLineChange();}
   updateBtns();
+  loadTopDefects(selectedStyle?selectedStyle.styleId:null);
 }
 function onLineChange(){
   const v=document.getElementById('lsel').value;
@@ -1245,6 +1254,7 @@ function clearSelection(){
   const _ban=document.getElementById('banner');if(_ban)_ban.style.display='none';
   const _aq=document.getElementById('aqstrip');if(_aq)_aq.style.display='none';
   updateBtns();
+  loadTopDefects(null);
 }
 
 function toggleDetail(){
@@ -1257,6 +1267,24 @@ function toggleDetail(){
 // PIECES
 // ═══════════════════════════════════════════
 function chgPcs(d){pieceCount=Math.max(1,Math.min(99,pieceCount+d));document.getElementById('pcsv').textContent=pieceCount;}
+
+async function loadTopDefects(styleId){
+  const list=document.getElementById('top-def-list');if(!list)return;
+  if(!styleId){list.innerHTML='<div style="font-size:12px;color:var(--t3)">Select style</div>';return;}
+  try{
+    const rows=await sbGet(`qc_inspections?style_id=eq.${encodeURIComponent(styleId)}&defect_name_en=not.is.null&select=defect_name_en`);
+    const freq={};
+    rows.forEach(r=>(r.defect_name_en||'').split(',').map(s=>s.trim()).filter(Boolean).forEach(n=>{freq[n]=(freq[n]||0)+1;}));
+    const top=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    if(!top.length){list.innerHTML='<div style="font-size:12px;color:var(--t3)">No defects yet</div>';return;}
+    list.innerHTML=top.map(([n,ct],i)=>
+      `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;line-height:1.3">
+        <span style="color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${['①','②','③'][i]} ${n}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3);flex-shrink:0;margin-left:4px">${ct}×</span>
+      </div>`
+    ).join('');
+  }catch(e){list.innerHTML='<div style="font-size:12px;color:var(--t3)">—</div>';}
+}
 
 // ═══════════════════════════════════════════
 // ACTIONS
@@ -1965,10 +1993,19 @@ function exportCSV(){
 // ═══════════════════════════════════════════
 
 // State
+const FIN_CASCADE=['Initial Check','Mid Check','Final Check','Final Audit'];
+const CAT_COLORS={
+  'Stitching':{bg:'var(--blu-d)',bdr:'var(--blu)',clr:'var(--blu)'},
+  'Finishing': {bg:'var(--teal-d)',bdr:'var(--teal)',clr:'var(--teal)'},
+  'Label':     {bg:'var(--pur-d)',bdr:'var(--pur)',clr:'var(--pur)'},
+  'Shape':     {bg:'var(--org-d)',bdr:'var(--org)',clr:'var(--org)'},
+  'Assembly':  {bg:'var(--red-d)',bdr:'var(--red)',clr:'var(--red)'},
+};
 let finStyle=null,finStage=null,finStageLocked=false,finActiveLines=[],_finAlterQueue=[];
 let finishingStages=[],finPendingAction=null,finSelectedLine=null;
 let finSelectedCategory=null,finSelectedDefects=[],_finPendingReinspect=null,finDdHi=-1;
 let _finSewPassMap={},_finFinPassMap={},_finDefectFreq={};   // styleId → total pcs; defectName → count
+let _finStagePassMap={};   // styleId → {stageName → passCount}
 
 // Line colour palette (fallback)
 const FIN_PALETTE=['#0f766e','#0369a1','#7c3aed','#b45309','#be123c','#0891b2','#4d7c0f','#9333ea','#c2410c','#1d4ed8'];
@@ -2006,6 +2043,26 @@ async function loadFinPassMaps(){
   }catch(e){console.warn('loadFinPassMaps error:',e);}
 }
 
+async function loadFinStagePassMap(styleId){
+  if(!styleId)return;
+  try{
+    const rows=await sbGet(`finishing_inspections?result=eq.Pass&style_id=eq.${encodeURIComponent(styleId)}&select=stage_name,pieces_count`);
+    _finStagePassMap[styleId]={};
+    rows.forEach(r=>{if(r.stage_name)_finStagePassMap[styleId][r.stage_name]=(_finStagePassMap[styleId][r.stage_name]||0)+(r.pieces_count||1);});
+  }catch(e){console.warn('loadFinStagePassMap error:',e);}
+}
+
+function finCascadeInput(stageName,styleId){
+  const idx=FIN_CASCADE.indexOf(stageName);
+  if(idx<=0) return {count:_finSewPassMap[styleId]||0,label:'Sewing ✅'};
+  const stageMap=_finStagePassMap[styleId]||{};
+  for(let i=idx-1;i>=0;i--){
+    const prev=FIN_CASCADE[i];
+    if(stageMap[prev]>0) return {count:stageMap[prev],label:`${prev} ✅`};
+  }
+  return {count:_finSewPassMap[styleId]||0,label:'Sewing ✅'};
+}
+
 function initFinishingScreen(){
   const el=document.getElementById('fin-uname');
   if(el)el.textContent=currentUser.fullName||currentUser.username;
@@ -2015,7 +2072,6 @@ function initFinishingScreen(){
   ['fin-pcs-bar','fin-lines-card','fin-stage-card','fin-stats-card','fin-action-card','fin-aqstrip']
     .forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
   loadFinPassMaps();
-  loadFinAlterQueue();
 }
 
 // ── Style dropdown ──
@@ -2083,12 +2139,15 @@ async function onFinStyleSelected(){
   document.getElementById('fin-action-card').style.display='none';
 
   // Pcs info bar
+  await loadFinStagePassMap(finStyle.styleId);
   const sew=_finSewPassMap[finStyle.styleId]||0;
   const fin=_finFinPassMap[finStyle.styleId]||0;
   const rem=Math.max(0,sew-fin);
   document.getElementById('fin-sew-pass').textContent=sew||'—';
   document.getElementById('fin-done').textContent=fin||'0';
   document.getElementById('fin-remain').textContent=rem||'0';
+  const _lbl=document.getElementById('fin-input-label');if(_lbl)_lbl.textContent='Sewing ✅';
+  const _dlbl=document.getElementById('fin-done-label');if(_dlbl)_dlbl.textContent='Finished';
   document.getElementById('fin-pcs-bar').style.display='block';
 
   // Sewing lines
@@ -2143,6 +2202,13 @@ function finSelectStage(s){
   finStage=s;finStageLocked=true;
   document.getElementById('fin-stage-info').textContent=s.name;
   renderFinStages();
+  // Update pcs bar for cascade input
+  if(finStyle){
+    const ci=finCascadeInput(s.name,finStyle.styleId);
+    document.getElementById('fin-sew-pass').textContent=ci.count||'—';
+    const _lbl=document.getElementById('fin-input-label');if(_lbl)_lbl.textContent=ci.label;
+    const _dlbl=document.getElementById('fin-done-label');if(_dlbl)_dlbl.textContent='This Stage ✅';
+  }
   document.getElementById('fin-stats-card').style.display='block';
   document.getElementById('fin-action-card').style.display='block';
   loadFinStats();
@@ -2172,10 +2238,13 @@ async function loadFinStats(){
     _s('fin-sa-all',aA?`All: ${aA}`:'');
     _s('fin-sr-all',rA?`All: ${rA}`:'');
     _s('fin-dhu-all',dhuA!=='—'?`All: ${dhuA}`:'');
-    // Refresh pcs bar using all-time pass count
+    // Refresh pcs bar using cascade input
     _finFinPassMap[finStyle.styleId]=pA;
-    const sew=_finSewPassMap[finStyle.styleId]||0;
-    _s('fin-done',pA);_s('fin-remain',Math.max(0,sew-pA));
+    if(!_finStagePassMap[finStyle.styleId])_finStagePassMap[finStyle.styleId]={};
+    _finStagePassMap[finStyle.styleId][finStage.name]=pA;
+    const ci=finCascadeInput(finStage.name,finStyle.styleId);
+    const _lbl=document.getElementById('fin-input-label');if(_lbl)_lbl.textContent=ci.label;
+    _s('fin-sew-pass',ci.count||'—');_s('fin-done',pA);_s('fin-remain',Math.max(0,(ci.count||0)-pA));
   }catch(e){console.warn('loadFinStats error:',e);}
 }
 
@@ -2238,7 +2307,7 @@ function finOpenCat(act){
   // Fixed category area (never scrolls)
   const catArea=document.getElementById('fin-cat-area');
   catArea.innerHTML=`<div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);margin-bottom:8px;font-weight:600">CATEGORY <span style="color:var(--red)">★</span> required</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px">${cats.map(c=>`<button class="fin-cat-btn" id="fcat-${c.replace(/[^a-zA-Z0-9]/g,'_')}" onclick="finSelectCategory('${c}')">${c}</button>`).join('')}</div>`;
+    <div style="display:flex;flex-wrap:wrap;gap:8px">${cats.map(c=>{const col=CAT_COLORS[c]||{};const st=col.bg?`style="background:${col.bg};border-color:${col.bdr};color:${col.clr}"`:'';;return`<button class="fin-cat-btn" id="fcat-${c.replace(/[^a-zA-Z0-9]/g,'_')}" onclick="finSelectCategory('${c}')" ${st}>${c}</button>`;}).join('')}</div>`;
   // Scrollable defect list (empty until category tapped)
   const body=document.getElementById('fin-cbody');
   body.innerHTML=`<div id="fin-def-section" style="display:none">
@@ -2258,14 +2327,22 @@ function finCloseCat(){
   finSelectedCategory=null;finSelectedDefects=[];_finPendingReinspect=null;
 }
 function finSelectCategory(cat){
-  finSelectedCategory=cat;finSelectedDefects=[];
-  document.querySelectorAll('.fin-cat-btn').forEach(b=>b.classList.remove('active'));
-  const pb=document.getElementById(`fcat-${cat.replace(/[^a-zA-Z0-9]/g,'_')}`);if(pb)pb.classList.add('active');
+  finSelectedCategory=cat;
+  // Do NOT reset finSelectedDefects — preserve multi-select across category switches
+  document.querySelectorAll('.fin-cat-btn').forEach(b=>{
+    b.classList.remove('active');
+    // Restore colour styling
+    const c=b.textContent.trim();const col=CAT_COLORS[c]||{};
+    if(col.bg){b.style.background=col.bg;b.style.borderColor=col.bdr;b.style.color=col.clr;}
+  });
+  const pb=document.getElementById(`fcat-${cat.replace(/[^a-zA-Z0-9]/g,'_')}`);
+  if(pb){pb.classList.add('active');const col=CAT_COLORS[cat]||{};if(col.bdr){pb.style.background=col.bdr;pb.style.borderColor=col.bdr;pb.style.color='#fff';}}
   document.getElementById('fin-def-section').style.display='block';
   const srch=document.getElementById('fin-dsrch');if(srch)srch.value='';
   renderFinDefectList('');
   const btn=document.getElementById('fin-bconf');
-  if(btn){btn.disabled=false;btn.textContent=`Save — ${cat} (no specific defect)`;}
+  const n=finSelectedDefects.length;
+  if(btn){btn.disabled=false;btn.textContent=n>0?`Save — ${cat} · ${finSelectedDefects.map(d=>d.nameEN).join(', ')}`:`Save — ${cat} (no specific defect)`;}
 }
 function renderFinDefectList(q=''){
   const list=document.getElementById('fin-dlist');if(!list)return;
