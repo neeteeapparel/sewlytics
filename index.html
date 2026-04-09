@@ -814,6 +814,7 @@ const TABLES   = {
 let lang='en', currentUser=null, allOrders=[], allLines=[], allDefects=[];
 let alterQueue=[], selectedStyle=null, selectedLine=null, pieceCount=1;
 let pendingAction=null, selectedDefects=[], sessionId='S'+Date.now();
+let _sewDefectFreq={};
 let actionCooldown=false, detailOpen=false;
 let reportData=[], reportAlter=[];
 
@@ -1135,6 +1136,7 @@ function onStyleSelected(){
   } else if(lines.length===1){lsel.value=lines[0];onLineChange();}
   updateBtns();
   loadTopDefects(selectedStyle?selectedStyle.styleId:null);
+  if(selectedStyle)loadSewDefectFreq(selectedStyle.styleId);
 }
 function onLineChange(){
   const v=document.getElementById('lsel').value;
@@ -1418,6 +1420,7 @@ function renderDefs(q){
   allDefects.filter(d=>!fl||d.nameEN.toLowerCase().includes(fl)||d.nameHI.includes(fl))
     .forEach(d=>{if(!cats[d.category])cats[d.category]=[];cats[d.category].push(d);});
   Object.entries(cats).forEach(([cat,defs])=>{
+    defs.sort((a,b)=>(_sewDefectFreq[b.nameEN]||0)-(_sewDefectFreq[a.nameEN]||0));
     const ce=document.createElement('div');ce.className='def-cat';ce.textContent=cat;list.appendChild(ce);
     defs.forEach(d=>{
       const isSel=selectedDefects.some(s=>s.id===d.id);
@@ -1435,6 +1438,14 @@ function renderDefs(q){
   });
 }
 function filterDef(){renderDefs(document.getElementById('dsrch').value);}
+async function loadSewDefectFreq(styleId){
+  try{
+    const path=styleId?`qc_inspections?style_id=eq.${encodeURIComponent(styleId)}&defect_name_en=not.is.null&select=defect_name_en`:`qc_inspections?defect_name_en=not.is.null&select=defect_name_en`;
+    const rows=await sbGet(path);
+    _sewDefectFreq={};
+    rows.forEach(r=>(r.defect_name_en||'').split(',').map(s=>s.trim()).filter(Boolean).forEach(n=>{_sewDefectFreq[n]=(_sewDefectFreq[n]||0)+1;}));
+  }catch(e){console.warn('loadSewDefectFreq error:',e);}
+}
 function toggleDef(d){
   const i=selectedDefects.findIndex(s=>s.id===d.id);
   if(i>=0)selectedDefects.splice(i,1);else selectedDefects.push(d);
@@ -2349,6 +2360,9 @@ function renderFinDefectList(q=''){
   const list=document.getElementById('fin-dlist');if(!list)return;
   list.innerHTML='';
   const fl=q.toLowerCase();
+  const col=CAT_COLORS[finSelectedCategory]||{};
+  const dotC=col.bdr||'var(--grn)';
+  const bgC=col.bg||'#f0fdf4';
   // Filter by category + search, then sort by frequency (most used first)
   const defs=allDefects
     .filter(d=>d.category===finSelectedCategory&&
@@ -2358,9 +2372,10 @@ function renderFinDefectList(q=''){
   defs.forEach(d=>{
     const isSel=finSelectedDefects.some(s=>s.id===d.id);
     const freq=_finDefectFreq[d.nameEN]||0;
-    const el=document.createElement('div');el.className='def-item'+(isSel?' sel':'');
-    el.innerHTML=`<div class="def-dot">${isSel?'✓':''}</div>
-      <div style="flex:1"><div class="def-name">${d.nameEN}</div>${d.nameHI?`<div class="def-hi">${d.nameHI}</div>`:''}</div>
+    const el=document.createElement('div');el.className='def-item';
+    if(isSel)el.style.cssText=`background:${bgC};border-color:${dotC};border-left:3px solid ${dotC}`;
+    el.innerHTML=`<div class="def-dot" ${isSel?`style="background:${dotC};border-color:${dotC};color:#fff"`:''}>${isSel?'✓':''}</div>
+      <div style="flex:1"><div class="def-name">${d.nameEN}</div>${d.nameHI?`<div class="def-hi" style="color:${dotC}">${d.nameHI}</div>`:''}</div>
       ${freq>0?`<div style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace">${freq}×</div>`:''}`;
     let _ty=0;
     el.addEventListener('touchstart',e=>{_ty=e.touches[0].clientY;},{passive:true});
