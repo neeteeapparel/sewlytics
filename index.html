@@ -1533,7 +1533,7 @@ function renderQueue(){
   body.innerHTML='';
   alterQueue.forEach(q=>{
     const div=document.createElement('div');div.className='q-item';
-    const dt=q.dateSent?new Date(q.dateSent).toLocaleDateString('en-IN'):'—';
+    const dt=fmtDate(q.dateSent);
     const qpo = q.po ? `<span style="background:rgba(77,166,255,0.15);color:#4da6ff;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;margin-left:4px">${q.po}</span>` : '';
     div.innerHTML=`<div class="q-style">${q.styleId}${qpo}</div>
       <div class="q-meta">Line: ${q.lineName} · ${q.pieces} pcs · ${dt}</div>
@@ -2707,7 +2707,7 @@ function finRenderQueue(){
   body.innerHTML='';
   _finAlterQueue.forEach(q=>{
     const div=document.createElement('div');div.className='q-item';
-    const dt=q.dateSent?new Date(q.dateSent).toLocaleDateString('en-IN'):'—';
+    const dt=fmtDate(q.dateSent);
     const defLabel=q.defectEN||'—';
     div.innerHTML=`<div class="q-style">${q.styleId}
         <span style="background:rgba(15,118,110,0.12);color:var(--teal);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:4px">${q.stageName}</span>
