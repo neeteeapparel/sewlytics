@@ -242,6 +242,8 @@ body{font-family:'Rajdhani','Noto Sans Devanagari',sans-serif;background:var(--b
 .mgr-hdr .brand{font-size:20px;font-weight:700;letter-spacing:1px;color:var(--teal);font-weight:800}
 .mgr-hdr .role-badge{background:var(--teal-d);border:1px solid var(--teal);border-radius:20px;color:var(--teal);font-size:12px;font-weight:600;padding:4px 12px;letter-spacing:1px}
 .mgr-main{flex:1;padding:16px;max-width:1000px;margin:0 auto;width:100%}
+@media(min-width:1280px){.mgr-main{max-width:1400px;padding:20px 28px}}
+@media(min-width:1600px){.mgr-main{max-width:1700px;padding:20px 40px}}
 
 /* Filters */
 .filter-bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;align-items:flex-end}
@@ -297,6 +299,23 @@ tr:hover td{background:var(--s2)}
 .rank-2{background:rgba(77,166,255,.15);color:var(--blu);border:1px solid var(--blu)}
 .rank-3{background:rgba(167,139,250,.15);color:var(--pur);border:1px solid var(--pur)}
 .rank-n{background:var(--s3);color:var(--t2);border:1px solid var(--bdr)}
+/* Line expand */
+.line-expand-row{display:none}
+.line-expand-row.open{display:table-row}
+.line-expand-inner{background:var(--s2);padding:4px 0 8px 48px;border-bottom:1px solid var(--bdr)}
+.lst{width:100%;font-size:12px;border-collapse:collapse}
+.lst td,.lst th{padding:5px 10px;border-bottom:1px solid var(--bdr)}
+.lst tr:last-child td{border-bottom:none}
+.lst th{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);font-weight:600;background:var(--s3);text-align:left}
+.lst td.nr{text-align:right;font-family:'JetBrains Mono',monospace}
+/* Style history sheet */
+.sth-sheet{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:24px 24px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.2);z-index:400;max-height:90vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,1,.58,1)}
+.sth-sheet.open{transform:translateY(0)}
+.sth-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:399;opacity:0;pointer-events:none;transition:opacity .3s}
+.sth-ov.open{opacity:1;pointer-events:all}
+.sth-hdr{padding:16px 20px 12px;border-bottom:1px solid var(--bdr);flex-shrink:0;display:flex;align-items:flex-start;justify-content:space-between}
+.sth-body{flex:1;overflow-y:auto;padding:16px 20px 32px}
+.sth-sec{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);font-weight:600;margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--bdr)}
 
 /* Defect chart */
 .defect-chart{margin-bottom:20px}
@@ -616,9 +635,9 @@ tr:hover td{background:var(--s2)}
             <th>Rank</th><th>Line</th><th>Floor</th>
             <th class="td-num">Inspected</th><th class="td-num">Pass</th>
             <th class="td-num">Alter</th><th class="td-num">Reject</th>
-            <th>DHU %</th><th class="td-num">Alter Pass Rate</th>
+            <th>DHU %</th><th class="td-num">Alter Pass Rate</th><th>Styles</th>
           </tr></thead>
-          <tbody id="tbody-line"><tr><td colspan="9" style="text-align:center;color:var(--t2);padding:20px">Loading...</td></tr></tbody>
+          <tbody id="tbody-line"><tr><td colspan="10" style="text-align:center;color:var(--t2);padding:20px">Loading...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -658,6 +677,20 @@ tr:hover td{background:var(--s2)}
     </div>
 
   </div>
+</div>
+
+<!-- STYLE HISTORY SHEET -->
+<div class="sth-ov" id="sth-ov" onclick="closeStyleHistory()"></div>
+<div class="sth-sheet" id="sth-sh">
+  <div class="sh-handle"></div>
+  <div class="sth-hdr">
+    <div>
+      <div style="font-size:18px;font-weight:700;color:var(--text)" id="sth-title">Style History</div>
+      <div style="font-size:13px;color:var(--t2);margin-top:2px" id="sth-sub"></div>
+    </div>
+    <button class="btn-back" onclick="closeStyleHistory()">✕ Close</button>
+  </div>
+  <div class="sth-body" id="sth-body"></div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════
@@ -1652,11 +1685,20 @@ document.addEventListener('click', e => {
   if(wrap && !wrap.contains(e.target)) closeRptStyleDD();
 });
 
+function fmtDate(str){
+  if(!str)return'—';
+  const d=new Date(str.length===10?str+'T00:00:00':str);
+  if(isNaN(d.getTime()))return str;
+  const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return`${mo[d.getMonth()]}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`;
+}
+let _sthData=null; // style history data
+
 function initManagerFilters(){
-  const today=new Date().toISOString().split('T')[0];
-  const sixMonthsAgo=new Date(Date.now()-180*24*60*60*1000).toISOString().split('T')[0];
-  document.getElementById('fdt1').value=sixMonthsAgo;
-  document.getElementById('fdt2').value=today;
+  const today=new Date();
+  const yesterday=new Date(today);yesterday.setDate(yesterday.getDate()-1);
+  document.getElementById('fdt1').value=yesterday.toISOString().split('T')[0];
+  document.getElementById('fdt2').value=today.toISOString().split('T')[0];
   // Warn if date range > 90 days (performance)
   document.getElementById('fdt1').addEventListener('change', checkDateRange);
   document.getElementById('fdt2').addEventListener('change', checkDateRange);
@@ -1701,11 +1743,16 @@ async function loadReport(){
     }}));
     reportData=qcRecs;reportAlter=aqRecs;
 
-    // Populate customer filter
+    // Populate customer filter from date-range data
     const custs=[...new Set(qcRecs.map(r=>r.fields['Customer']).filter(Boolean))].sort();
     const fc=document.getElementById('fcust');
     const cur=fc.value;fc.innerHTML='<option value="">All Customers</option>';
     custs.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;if(c===cur)o.selected=true;fc.appendChild(o);});
+    // Populate line filter from date-range data only
+    const activeLines=[...new Set(qcRecs.map(r=>r.fields['Line Name']).filter(Boolean))].sort();
+    const fl=document.getElementById('fline');const curLine=fl.value;
+    fl.innerHTML='<option value="">All Lines</option>';
+    activeLines.forEach(ln=>{const lo=allLines.find(l=>l.lineName===ln)||{};const o=document.createElement('option');o.value=ln;o.textContent=ln+(lo.floor?` · ${lo.floor}`:'');if(ln===curLine)o.selected=true;fl.appendChild(o);});
 
     buildSummary(qcRecs,aqRecs);
     buildStyleTable(qcRecs,aqRecs);
@@ -1766,10 +1813,10 @@ function setStyleGroup(mode){
 }
 
 function resetFilters(){
-  const today=new Date().toISOString().split('T')[0];
-  const sixMonthsAgo=new Date(Date.now()-180*24*60*60*1000).toISOString().split('T')[0];
-  document.getElementById('fdt1').value=sixMonthsAgo;
-  document.getElementById('fdt2').value=today;
+  const today=new Date();
+  const yesterday=new Date(today);yesterday.setDate(yesterday.getDate()-1);
+  document.getElementById('fdt1').value=yesterday.toISOString().split('T')[0];
+  document.getElementById('fdt2').value=today.toISOString().split('T')[0];
   document.getElementById('fline').value='';
   document.getElementById('fcust').value='';
   clearRptStyle(true); // true = skip reload, we'll do it once at the end
@@ -1828,6 +1875,7 @@ function renderStyleTable(){
       ?`<span style="background:rgba(124,58,237,0.12);color:var(--pur);border-radius:4px;padding:2px 7px;font-size:12px;font-weight:700">${r.color||'—'}</span>`
       :`<span style="background:var(--s2);color:var(--t2);border-radius:4px;padding:2px 7px;font-size:12px;font-weight:600">${r.colorCount} color${r.colorCount>1?'s':''}</span>`;
     const tr=document.createElement('tr');
+    tr.style.cursor='pointer';tr.title='Click to view style history';
     tr.innerHTML=`<td style="font-weight:600">${byColor?r.styleId:r.baseStyle}</td>
       <td>${colorCell}</td>
       <td style="color:var(--t2)">${r.customer}</td>
@@ -1841,6 +1889,7 @@ function renderStyleTable(){
       <td class="td-num" style="color:var(--grn)">${r.tpass}</td>
       <td class="td-num" style="color:var(--red)">${r.treject}</td>
       <td><div class="dhu-bar"><div class="dhu-track"><div class="dhu-fill ${cls}" style="width:${pct}%"></div></div><span class="td-dhu" style="min-width:48px">${r.dhu.toFixed(1)}%</span></div></td>`;
+    tr.addEventListener('click',()=>openStyleHistory(r,_styleTableRecs));
     tbody.appendChild(tr);
   });
 }
@@ -1857,16 +1906,29 @@ function buildLineTable(recs,aqRecs){
     const m=calcMetrics(s.recs);
     const lineAQ=(aqRecs||[]).filter(r=>r.fields['Line Name']===s.lineName);
     const ar=calcAQPassRate(lineAQ);
-    return{...s,...m,altPassRate:ar};
+    // Styles worked on this line
+    const styleMap={};
+    s.recs.forEach(r=>{
+      const sid=r.fields['Style']||r.fields['Style ID']||'';if(!sid)return;
+      if(!styleMap[sid])styleMap[sid]={style:sid,recs:[]};
+      styleMap[sid].recs.push(r);
+    });
+    const styles=Object.values(styleMap).map(sm=>{
+      const sm2=calcMetrics(sm.recs);return{style:sm.style,...sm2};
+    }).sort((a,b)=>b.total-a.total);
+    return{...s,...m,altPassRate:ar,styles};
   });
   rows.sort((a,b)=>a.dhu-b.dhu);
+  const maxDHU=Math.max(...rows.map(x=>x.dhu),1);
   const tbody=document.getElementById('tbody-line');tbody.innerHTML='';
-  if(!rows.length){tbody.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--t2);padding:20px">No data</td></tr>';return;}
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--t2);padding:20px">No data</td></tr>';return;}
   rows.forEach((r,i)=>{
     const rank=i+1;
     const rc=rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-n';
     const cls=r.dhu<10?'good':r.dhu>25?'bad':'';
+    const eid=`le-${r.lineName.replace(/\W/g,'_')}`;
     const tr=document.createElement('tr');
+    tr.style.cursor='pointer';tr.title='Click to expand styles';
     tr.innerHTML=`<td><span class="rank-badge ${rc}">${rank}</span></td>
       <td style="font-weight:600">${r.lineName}</td>
       <td style="color:var(--t2)">${r.floor}</td>
@@ -1874,10 +1936,117 @@ function buildLineTable(recs,aqRecs){
       <td class="td-num td-pass">${r.pass}</td>
       <td class="td-num td-alt">${r.alter}</td>
       <td class="td-num td-rej">${r.reject}</td>
-      <td><div class="dhu-bar"><div class="dhu-track"><div class="dhu-fill ${cls}" style="width:${Math.min((r.dhu/Math.max(...rows.map(x=>x.dhu),1))*100,100)}%"></div></div><span class="td-dhu" style="min-width:48px">${r.dhu.toFixed(1)}%</span></div></td>
-      <td class="td-num" style="color:var(--pur)">${r.altPassRate!==null&&r.altPassRate!==undefined?r.altPassRate.toFixed(0)+'%':'—'}</td>`;
+      <td><div class="dhu-bar"><div class="dhu-track"><div class="dhu-fill ${cls}" style="width:${Math.min((r.dhu/maxDHU)*100,100)}%"></div></div><span class="td-dhu" style="min-width:48px">${r.dhu.toFixed(1)}%</span></div></td>
+      <td class="td-num" style="color:var(--pur)">${r.altPassRate!=null?r.altPassRate.toFixed(0)+'%':'—'}</td>
+      <td style="color:var(--teal);font-size:12px;font-weight:600;white-space:nowrap">${r.styles.length} style${r.styles.length!==1?'s':''} ▾</td>`;
+    tr.addEventListener('click',()=>{const e=document.getElementById(eid);if(e)e.classList.toggle('open');});
     tbody.appendChild(tr);
+    // Expandable style sub-rows
+    const expTr=document.createElement('tr');expTr.id=eid;expTr.className='line-expand-row';
+    expTr.innerHTML=`<td colspan="10" style="padding:0">
+      <div class="line-expand-inner">
+        <table class="lst">
+          <thead><tr><th>Style</th><th class="nr">Inspected</th><th class="nr">Pass</th><th class="nr">Alter</th><th class="nr">Reject</th><th class="nr">DHU %</th></tr></thead>
+          <tbody>${r.styles.map(s=>`<tr>
+            <td style="font-weight:600">${s.style}</td>
+            <td class="nr">${s.total}</td>
+            <td class="nr" style="color:var(--grn)">${s.pass}</td>
+            <td class="nr" style="color:var(--org)">${s.alter}</td>
+            <td class="nr" style="color:var(--red)">${s.reject}</td>
+            <td class="nr" style="color:${s.dhu<10?'var(--grn)':s.dhu>25?'var(--red)':'var(--org)'}">${s.dhu.toFixed(1)}%</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </td>`;
+    tbody.appendChild(expTr);
   });
+}
+
+function openStyleHistory(row, allRecs){
+  _sthData={row,allRecs};
+  const title=document.getElementById('sth-title');
+  const sub=document.getElementById('sth-sub');
+  const body=document.getElementById('sth-body');
+  const styleKey=row.baseStyle||row.styleId;
+  title.textContent=styleKey;
+  sub.textContent=`${row.customer||''}${row.type?' · '+row.type:''}  ·  DHU ${row.dhu.toFixed(1)}%`;
+
+  // Filter recs for this style
+  const recs=allRecs.filter(r=>{
+    const s=r.fields['Style']||r.fields['Style ID']||'';
+    return s===styleKey||s.startsWith(styleKey+' ');
+  });
+
+  // Summary mini-cards
+  const summaryHTML=`<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:4px">
+    ${[['Inspected',row.total,'var(--blu)'],['Pass',row.pass,'var(--grn)'],['Alter',row.alter,'var(--org)'],['Reject',row.reject,'var(--red)'],['DHU %',row.dhu.toFixed(1)+'%','var(--org)']].map(([l,v,c])=>
+      `<div style="background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);padding:10px 6px;text-align:center">
+        <div style="font-size:20px;font-weight:800;color:${c};font-family:'JetBrains Mono',monospace">${v}</div>
+        <div style="font-size:10px;color:var(--t2);letter-spacing:1px;text-transform:uppercase;margin-top:3px">${l}</div>
+      </div>`
+    ).join('')}
+  </div>`;
+
+  // Date breakdown
+  const byDate={};
+  recs.forEach(r=>{
+    const dt=r.fields['Inspection Date']||r.fields['Inspection DateTime']||'';
+    const d=dt?dt.split('T')[0]:'—';
+    if(!byDate[d])byDate[d]={pass:0,alter:0,reject:0,total:0};
+    const pcs=r.fields['Pieces Count']||0;
+    const res=r.fields['Result']||'';
+    const isRI=!!(r.fields['Is Alter Reinspection']);
+    if(!isRI){
+      if(res==='Pass')byDate[d].pass+=pcs;
+      else if(res==='Alter')byDate[d].alter+=pcs;
+      else if(res==='Reject')byDate[d].reject+=pcs;
+      byDate[d].total+=pcs;
+    }
+  });
+  const dateRows=Object.entries(byDate).filter(([d])=>d!=='—').sort((a,b)=>b[0].localeCompare(a[0]));
+  const dateHTML=dateRows.length?`<table class="lst"><thead><tr>
+    <th>Date</th><th class="nr">Inspected</th><th class="nr">Pass</th><th class="nr">Alter</th><th class="nr">Reject</th><th class="nr">DHU %</th>
+  </tr></thead><tbody>${dateRows.map(([d,v])=>{
+    const dhu=v.total>0?(((v.alter+v.reject)/v.total)*100):0;
+    return`<tr>
+      <td style="font-weight:600">${fmtDate(d)}</td>
+      <td class="nr">${v.total}</td>
+      <td class="nr" style="color:var(--grn)">${v.pass}</td>
+      <td class="nr" style="color:var(--org)">${v.alter}</td>
+      <td class="nr" style="color:var(--red)">${v.reject}</td>
+      <td class="nr" style="color:${dhu<10?'var(--grn)':dhu>25?'var(--red)':'var(--org)'}">${dhu.toFixed(1)}%</td>
+    </tr>`;
+  }).join('')}</tbody></table>`:'<div style="color:var(--t2);font-size:13px;padding:8px 0">No date data</div>';
+
+  // Top defects for this style
+  const defMap={};
+  recs.forEach(r=>{
+    const isRI=!!(r.fields['Is Alter Reinspection']);if(isRI)return;
+    const res=r.fields['Result']||'';if(res==='Pass')return;
+    const pcs=r.fields['Pieces Count']||0;
+    (r.fields['Defect Name EN']||'').split(',').map(d=>d.trim()).filter(Boolean)
+      .forEach(d=>{defMap[d]=(defMap[d]||0)+pcs;});
+  });
+  const topDefs=Object.entries(defMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const defHTML=topDefs.length?`<div style="display:flex;flex-wrap:wrap;gap:6px">${topDefs.map(([n,ct])=>
+    `<div style="background:var(--red-d);border:1px solid var(--red);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--red)">${n} <span style="opacity:.7">${ct}×</span></div>`
+  ).join('')}</div>`:'<div style="color:var(--t2);font-size:13px">No defects recorded</div>';
+
+  // Lines worked
+  const lineSet=[...new Set(recs.map(r=>r.fields['Line Name']).filter(Boolean))];
+  const linesHTML=lineSet.length?`<div style="display:flex;flex-wrap:wrap;gap:6px">${lineSet.map(ln=>`<div style="background:var(--teal-d);border:1px solid var(--teal);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700;color:var(--teal)">${ln}</div>`).join('')}</div>`:'—';
+
+  body.innerHTML=summaryHTML+
+    `<div class="sth-sec">Day-wise Breakdown</div>`+dateHTML+
+    `<div class="sth-sec">Top Defects</div>`+defHTML+
+    `<div class="sth-sec">Lines Worked</div>`+linesHTML;
+
+  document.getElementById('sth-ov').classList.add('open');
+  document.getElementById('sth-sh').classList.add('open');
+}
+function closeStyleHistory(){
+  document.getElementById('sth-ov').classList.remove('open');
+  document.getElementById('sth-sh').classList.remove('open');
 }
 
 function buildDefectChart(recs){
@@ -1946,7 +2115,7 @@ function buildAlterTable(recs){
       <td style="color:var(--t2)">${f['Line Name']||''}</td>
       <td>${f['Defect Name EN']||''}</td>
       <td class="td-num">${f['Pieces Count']||1}</td>
-      <td style="color:var(--t2)">${f['Date Sent to Alter']||''}</td>
+      <td style="color:var(--t2)">${fmtDate(f['Date Sent to Alter'])}</td>
       <td class="${stcls}">${st}</td>
       <td class="td-num">${tat}</td>`;
     tbody.appendChild(tr);
