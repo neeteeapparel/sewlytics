@@ -308,11 +308,12 @@ tr:hover td{background:var(--s2)}
 .line-expand-row{display:none}
 .line-expand-row.open{display:table-row}
 .line-expand-inner{background:var(--s2);padding:4px 0 8px 48px;border-bottom:1px solid var(--bdr)}
-.lst{width:100%;font-size:12px;border-collapse:collapse}
-.lst td,.lst th{padding:5px 10px;border-bottom:1px solid var(--bdr)}
+.line-expand-inner .lst{table-layout:fixed}
+.lst{width:100%;font-size:13px;border-collapse:collapse}
+.lst td,.lst th{padding:6px 12px;border-bottom:1px solid var(--bdr)}
 .lst tr:last-child td{border-bottom:none}
-.lst th{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);font-weight:600;background:var(--s3);text-align:left}
-.lst td.nr{text-align:right;font-family:'JetBrains Mono',monospace}
+.lst th{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);font-weight:600;background:var(--s3);text-align:left}
+.lst td.nr,.lst th.nr{text-align:right;font-family:'JetBrains Mono',monospace}
 /* Style history sheet */
 .sth-sheet{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:24px 24px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.2);z-index:400;max-height:90vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,1,.58,1)}
 .sth-sheet.open{transform:translateY(0)}
@@ -1969,14 +1970,14 @@ function buildLineTable(recs,aqRecs){
     expTr.innerHTML=`<td colspan="10" style="padding:0">
       <div class="line-expand-inner">
         <table class="lst">
-          <thead><tr><th>Style</th><th class="nr">Inspected</th><th class="nr">Pass</th><th class="nr">Alter</th><th class="nr">Reject</th><th class="nr">DHU %</th></tr></thead>
+          <thead><tr><th style="width:40%">Style</th><th class="nr" style="width:12%">Inspected</th><th class="nr" style="width:10%">Pass</th><th class="nr" style="width:10%">Alter</th><th class="nr" style="width:10%">Reject</th><th class="nr" style="width:18%">DHU %</th></tr></thead>
           <tbody>${r.styles.map(s=>`<tr>
             <td style="font-weight:600">${s.style}</td>
             <td class="nr">${s.total}</td>
             <td class="nr" style="color:var(--grn)">${s.pass}</td>
             <td class="nr" style="color:var(--org)">${s.alter}</td>
             <td class="nr" style="color:var(--red)">${s.reject}</td>
-            <td class="nr" style="color:${s.dhu<10?'var(--grn)':s.dhu>25?'var(--red)':'var(--org)'}">${s.dhu.toFixed(1)}%</td>
+            <td class="nr" style="color:${s.dhu<10?'var(--grn)':s.dhu>25?'var(--red)':'var(--org)'};font-weight:700">${s.dhu.toFixed(1)}%</td>
           </tr>`).join('')}</tbody>
         </table>
       </div>
@@ -2003,20 +2004,22 @@ async function openStyleHistory(row, allRecs){
       'Defect Name EN':r.defect_name_en
     }}));
 
-    // Recalculate all-time metrics
-    let atTotal=0,atPass=0,atAlter=0,atReject=0;
+    // Recalculate all-time metrics (including re-pass)
+    let atTotal=0,atPass=0,atAlter=0,atReject=0,atRePass=0;
     recs.forEach(r=>{
-      const isRI=!!(r.fields['Is Alter Reinspection']);if(isRI)return;
+      const isRI=!!(r.fields['Is Alter Reinspection']);
       const pcs=r.fields['Pieces Count']||0;const res=r.fields['Result']||'';
-      if(res==='Pass')atPass+=pcs;else if(res==='Alter')atAlter+=pcs;else if(res==='Reject')atReject+=pcs;
-      atTotal+=pcs;
+      if(!isRI){
+        if(res==='Pass')atPass+=pcs;else if(res==='Alter')atAlter+=pcs;else if(res==='Reject')atReject+=pcs;
+        atTotal+=pcs;
+      } else if(res==='Pass'){atRePass+=pcs;}
     });
     const atDHU=atTotal>0?(((atAlter+atReject)/atTotal)*100):0;
     document.getElementById('sth-sub').textContent=`${row.customer||''}${row.type?' · '+row.type:''}  ·  All-time DHU ${atDHU.toFixed(1)}%`;
 
-    // Summary mini-cards (all-time)
-    const summaryHTML=`<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:4px">
-      ${[['Inspected',atTotal,'var(--blu)'],['Pass',atPass,'var(--grn)'],['Alter',atAlter,'var(--org)'],['Reject',atReject,'var(--red)'],['DHU %',atDHU.toFixed(1)+'%','var(--org)']].map(([l,v,c])=>
+    // Summary mini-cards (6 cards)
+    const summaryHTML=`<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:4px">
+      ${[['Inspected',atTotal,'var(--blu)'],['Pass',atPass,'var(--grn)'],['Alter',atAlter,'var(--org)'],['Reject',atReject,'var(--red)'],['Re-Pass',atRePass,'var(--teal)'],['DHU %',atDHU.toFixed(1)+'%','var(--org)']].map(([l,v,c])=>
         `<div style="background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);padding:10px 6px;text-align:center">
           <div style="font-size:20px;font-weight:800;color:${c};font-family:'JetBrains Mono',monospace">${v}</div>
           <div style="font-size:10px;color:var(--t2);letter-spacing:1px;text-transform:uppercase;margin-top:3px">${l}</div>
@@ -2024,12 +2027,13 @@ async function openStyleHistory(row, allRecs){
       ).join('')}
     </div>`;
 
-    // Day-wise breakdown (all-time)
+    // Day-wise breakdown (all-time) — 9 columns: Date|Day|Inspected|Pass|Alter|Reject|Re-Pass|Total Pass|DHU%
+    const DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const byDate={};
     recs.forEach(r=>{
       const dt=r.fields['Inspection Date']||r.fields['Inspection DateTime']||'';
       const d=dt?dt.split('T')[0]:'—';
-      if(!byDate[d])byDate[d]={pass:0,alter:0,reject:0,total:0};
+      if(!byDate[d])byDate[d]={pass:0,alter:0,reject:0,total:0,rp:0};
       const pcs=r.fields['Pieces Count']||0;const res=r.fields['Result']||'';
       const isRI=!!(r.fields['Is Alter Reinspection']);
       if(!isRI){
@@ -2037,19 +2041,25 @@ async function openStyleHistory(row, allRecs){
         else if(res==='Alter')byDate[d].alter+=pcs;
         else if(res==='Reject')byDate[d].reject+=pcs;
         byDate[d].total+=pcs;
-      }
+      } else if(res==='Pass'){byDate[d].rp+=pcs;}
     });
     const dateRows=Object.entries(byDate).filter(([d])=>d!=='—').sort((a,b)=>b[0].localeCompare(a[0]));
     const dateHTML=dateRows.length?`<table class="lst"><thead><tr>
-      <th>Date</th><th class="nr">Inspected</th><th class="nr">Pass</th><th class="nr">Alter</th><th class="nr">Reject</th><th class="nr">DHU %</th>
+      <th>Date</th><th>Day</th><th class="nr">Inspected</th><th class="nr">Pass</th><th class="nr">Alter</th><th class="nr">Reject</th><th class="nr">Re-Pass</th><th class="nr">Total Pass</th><th class="nr">DHU %</th>
     </tr></thead><tbody>${dateRows.map(([d,v])=>{
       const dhu2=v.total>0?(((v.alter+v.reject)/v.total)*100):0;
+      const dayObj=new Date(d.length===10?d+'T00:00:00':d);
+      const dayLbl=isNaN(dayObj.getTime())?'':DAY_NAMES[dayObj.getDay()];
+      const tPass=v.pass+v.rp;
       return`<tr>
-        <td style="font-weight:600">${fmtDate(d)}</td>
+        <td style="font-weight:600;white-space:nowrap">${fmtDate(d)}</td>
+        <td style="color:var(--t2);font-weight:600">${dayLbl}</td>
         <td class="nr">${v.total}</td>
         <td class="nr" style="color:var(--grn)">${v.pass}</td>
         <td class="nr" style="color:var(--org)">${v.alter}</td>
         <td class="nr" style="color:var(--red)">${v.reject}</td>
+        <td class="nr" style="color:var(--teal)">${v.rp||0}</td>
+        <td class="nr" style="color:var(--grn);font-weight:700">${tPass}</td>
         <td class="nr" style="color:${dhu2<10?'var(--grn)':dhu2>25?'var(--red)':'var(--org)'}">${dhu2.toFixed(1)}%</td>
       </tr>`;
     }).join('')}</tbody></table>`:'<div style="color:var(--t2);font-size:13px;padding:8px 0">No date data</div>';
