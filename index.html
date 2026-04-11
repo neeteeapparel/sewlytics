@@ -2040,13 +2040,18 @@ async function loadFinPassMaps(){
   try{
     const [sewRows,finRows,freqRows]=await Promise.all([
       sbGet('qc_inspections?result=eq.Pass&is_alter_reinspection=eq.false&select=style_id,pieces_count'),
-      sbGet('finishing_inspections?result=eq.Pass&select=style_id,pieces_count'),
+      sbGet('finishing_inspections?result=eq.Pass&select=style_id,stage_name,pieces_count'),
       sbGet('finishing_inspections?defect_name_en=not.is.null&select=defect_name_en')
     ]);
     _finSewPassMap={};
     sewRows.forEach(r=>{const id=r.style_id;if(id)_finSewPassMap[id]=(_finSewPassMap[id]||0)+(r.pieces_count||1);});
-    _finFinPassMap={};
-    finRows.forEach(r=>{const id=r.style_id;if(id)_finFinPassMap[id]=(_finFinPassMap[id]||0)+(r.pieces_count||1);});
+    _finFinPassMap={};_finStagePassMap={};
+    finRows.forEach(r=>{
+      const id=r.style_id;if(!id)return;
+      _finFinPassMap[id]=(_finFinPassMap[id]||0)+(r.pieces_count||1);
+      if(!_finStagePassMap[id])_finStagePassMap[id]={};
+      if(r.stage_name)_finStagePassMap[id][r.stage_name]=(_finStagePassMap[id][r.stage_name]||0)+(r.pieces_count||1);
+    });
     _finDefectFreq={};
     freqRows.forEach(r=>{
       (r.defect_name_en||'').split(',').map(s=>s.trim()).filter(Boolean)
@@ -2074,6 +2079,23 @@ function finCascadeInput(stageName,styleId){
   }
   return {count:_finSewPassMap[styleId]||0,label:'Sewing ✅'};
 }
+function hasFinishingWork(styleId){
+  const stages=finishingStages.length?finishingStages.map(s=>s.name):FIN_CASCADE;
+  for(const stageName of stages){
+    const ci=finCascadeInput(stageName,styleId);
+    const done=(_finStagePassMap[styleId]||{})[stageName]||0;
+    if(ci.count>done)return true;
+  }
+  return false;
+}
+function totalFinRemaining(styleId){
+  const stages=finishingStages.length?finishingStages.map(s=>s.name):FIN_CASCADE;
+  return stages.reduce((sum,stageName)=>{
+    const ci=finCascadeInput(stageName,styleId);
+    const done=(_finStagePassMap[styleId]||{})[stageName]||0;
+    return sum+Math.max(0,ci.count-done);
+  },0);
+}
 
 function initFinishingScreen(){
   const el=document.getElementById('fin-uname');
@@ -2092,12 +2114,8 @@ function finCloseStyleDD(){document.getElementById('fin-sdd').classList.remove('
 function finFilterStyle(){
   const q=document.getElementById('fin-ssrch').value.trim().toLowerCase();
   const dd=document.getElementById('fin-sdd');dd.innerHTML='';finDdHi=-1;
-  // Only show styles that have sewing passes AND still have remaining pcs
-  const eligible=allOrders.filter(o=>{
-    const sew=_finSewPassMap[o.styleId]||0;
-    const fin=_finFinPassMap[o.styleId]||0;
-    return sew>fin; // remaining work exists
-  });
+  // Show styles that have remaining work at ANY finishing stage (cascade-aware)
+  const eligible=allOrders.filter(o=>hasFinishingWork(o.styleId));
   const pool=eligible.length?eligible:allOrders; // fallback: show all if maps not loaded yet
   const filtered=q?pool.filter(o=>
     o.styleId.toLowerCase().includes(q)||o.style.toLowerCase().includes(q)||
@@ -2105,9 +2123,7 @@ function finFilterStyle(){
   ):pool.slice(0,60);
   if(!filtered.length){dd.innerHTML='<div class="d-empty">No styles with pending finishing work</div>';dd.classList.add('open');return;}
   filtered.forEach(o=>{
-    const sew=_finSewPassMap[o.styleId]||0;
-    const fin=_finFinPassMap[o.styleId]||0;
-    const rem=sew-fin;
+    const rem=totalFinRemaining(o.styleId);
     const div=document.createElement('div');div.className='d-item';
     const hl=q?o.styleId.replace(new RegExp(`(${q})`,'gi'),'<mark>$1</mark>'):o.styleId;
     div.innerHTML=`<div class="dm">${hl}</div>
@@ -2153,13 +2169,12 @@ async function onFinStyleSelected(){
   // Pcs info bar
   await loadFinStagePassMap(finStyle.styleId);
   const sew=_finSewPassMap[finStyle.styleId]||0;
-  const fin=_finFinPassMap[finStyle.styleId]||0;
-  const rem=Math.max(0,sew-fin);
+  const rem=totalFinRemaining(finStyle.styleId);
   document.getElementById('fin-sew-pass').textContent=sew||'—';
-  document.getElementById('fin-done').textContent=fin||'0';
+  document.getElementById('fin-done').textContent=(_finStagePassMap[finStyle.styleId]||{})[(finishingStages[0]||{}).name]||'0';
   document.getElementById('fin-remain').textContent=rem||'0';
   const _lbl=document.getElementById('fin-input-label');if(_lbl)_lbl.textContent='Sewing ✅';
-  const _dlbl=document.getElementById('fin-done-label');if(_dlbl)_dlbl.textContent='Finished';
+  const _dlbl=document.getElementById('fin-done-label');if(_dlbl)_dlbl.textContent=`${(finishingStages[0]||{}).name||'Stage 1'} ✅`;
   document.getElementById('fin-pcs-bar').style.display='block';
 
   // Sewing lines
