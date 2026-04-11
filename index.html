@@ -1611,6 +1611,7 @@ function applyTrans(){
 // ── REPORT STYLE SEARCH ──
 let rptStyleDD_hi = -1;
 let selectedRptStyle = null; // {styleId, po, color, customer}
+let _rptDateStyles = []; // styles active in current date range — populated by loadReport()
 
 function openRptStyleDD(){
   filterRptStyle();
@@ -1631,12 +1632,14 @@ function filterRptStyle(){
   allOpt.addEventListener('touchend', e => { e.preventDefault(); clearRptStyle(); });
   dd.appendChild(allOpt);
 
-  // Deduplicate by base Style — show each style once, no color/PO
+  // Deduplicate by base Style — use date-range styles if loaded, else fall back to allOrders
   const seen = new Set();
   const unique = [];
-  allOrders.forEach(o => {
-    const baseStyle = o.style || o.styleId;
-    if(!seen.has(baseStyle)){ seen.add(baseStyle); unique.push({...o, baseStyle}); }
+  const sourceStyles = _rptDateStyles.length ? _rptDateStyles : [...new Set(allOrders.map(o=>o.style||o.styleId).filter(Boolean))].sort();
+  sourceStyles.forEach(s => {
+    if(seen.has(s)) return; seen.add(s);
+    const o = allOrders.find(x=>(x.style||x.styleId)===s) || {};
+    unique.push({styleId:s, style:s, baseStyle:s, customer:o.customer||'', type:o.type||''});
   });
 
   const filtered = q
@@ -1753,6 +1756,8 @@ async function loadReport(){
     const fl=document.getElementById('fline');const curLine=fl.value;
     fl.innerHTML='<option value="">All Lines</option>';
     activeLines.forEach(ln=>{const lo=allLines.find(l=>l.lineName===ln)||{};const o=document.createElement('option');o.value=ln;o.textContent=ln+(lo.floor?` · ${lo.floor}`:'');if(ln===curLine)o.selected=true;fl.appendChild(o);});
+    // Populate style filter from date-range data only
+    _rptDateStyles=[...new Set(qcRecs.map(r=>r.fields['Style']).filter(Boolean))].sort();
 
     buildSummary(qcRecs,aqRecs);
     buildStyleTable(qcRecs,aqRecs);
@@ -1962,87 +1967,101 @@ function buildLineTable(recs,aqRecs){
   });
 }
 
-function openStyleHistory(row, allRecs){
+async function openStyleHistory(row, allRecs){
   _sthData={row,allRecs};
-  const title=document.getElementById('sth-title');
-  const sub=document.getElementById('sth-sub');
-  const body=document.getElementById('sth-body');
   const styleKey=row.baseStyle||row.styleId;
-  title.textContent=styleKey;
-  sub.textContent=`${row.customer||''}${row.type?' · '+row.type:''}  ·  DHU ${row.dhu.toFixed(1)}%`;
-
-  // Filter recs for this style
-  const recs=allRecs.filter(r=>{
-    const s=r.fields['Style']||r.fields['Style ID']||'';
-    return s===styleKey||s.startsWith(styleKey+' ');
-  });
-
-  // Summary mini-cards
-  const summaryHTML=`<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:4px">
-    ${[['Inspected',row.total,'var(--blu)'],['Pass',row.pass,'var(--grn)'],['Alter',row.alter,'var(--org)'],['Reject',row.reject,'var(--red)'],['DHU %',row.dhu.toFixed(1)+'%','var(--org)']].map(([l,v,c])=>
-      `<div style="background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);padding:10px 6px;text-align:center">
-        <div style="font-size:20px;font-weight:800;color:${c};font-family:'JetBrains Mono',monospace">${v}</div>
-        <div style="font-size:10px;color:var(--t2);letter-spacing:1px;text-transform:uppercase;margin-top:3px">${l}</div>
-      </div>`
-    ).join('')}
-  </div>`;
-
-  // Date breakdown
-  const byDate={};
-  recs.forEach(r=>{
-    const dt=r.fields['Inspection Date']||r.fields['Inspection DateTime']||'';
-    const d=dt?dt.split('T')[0]:'—';
-    if(!byDate[d])byDate[d]={pass:0,alter:0,reject:0,total:0};
-    const pcs=r.fields['Pieces Count']||0;
-    const res=r.fields['Result']||'';
-    const isRI=!!(r.fields['Is Alter Reinspection']);
-    if(!isRI){
-      if(res==='Pass')byDate[d].pass+=pcs;
-      else if(res==='Alter')byDate[d].alter+=pcs;
-      else if(res==='Reject')byDate[d].reject+=pcs;
-      byDate[d].total+=pcs;
-    }
-  });
-  const dateRows=Object.entries(byDate).filter(([d])=>d!=='—').sort((a,b)=>b[0].localeCompare(a[0]));
-  const dateHTML=dateRows.length?`<table class="lst"><thead><tr>
-    <th>Date</th><th class="nr">Inspected</th><th class="nr">Pass</th><th class="nr">Alter</th><th class="nr">Reject</th><th class="nr">DHU %</th>
-  </tr></thead><tbody>${dateRows.map(([d,v])=>{
-    const dhu=v.total>0?(((v.alter+v.reject)/v.total)*100):0;
-    return`<tr>
-      <td style="font-weight:600">${fmtDate(d)}</td>
-      <td class="nr">${v.total}</td>
-      <td class="nr" style="color:var(--grn)">${v.pass}</td>
-      <td class="nr" style="color:var(--org)">${v.alter}</td>
-      <td class="nr" style="color:var(--red)">${v.reject}</td>
-      <td class="nr" style="color:${dhu<10?'var(--grn)':dhu>25?'var(--red)':'var(--org)'}">${dhu.toFixed(1)}%</td>
-    </tr>`;
-  }).join('')}</tbody></table>`:'<div style="color:var(--t2);font-size:13px;padding:8px 0">No date data</div>';
-
-  // Top defects for this style
-  const defMap={};
-  recs.forEach(r=>{
-    const isRI=!!(r.fields['Is Alter Reinspection']);if(isRI)return;
-    const res=r.fields['Result']||'';if(res==='Pass')return;
-    const pcs=r.fields['Pieces Count']||0;
-    (r.fields['Defect Name EN']||'').split(',').map(d=>d.trim()).filter(Boolean)
-      .forEach(d=>{defMap[d]=(defMap[d]||0)+pcs;});
-  });
-  const topDefs=Object.entries(defMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  const defHTML=topDefs.length?`<div style="display:flex;flex-wrap:wrap;gap:6px">${topDefs.map(([n,ct])=>
-    `<div style="background:var(--red-d);border:1px solid var(--red);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--red)">${n} <span style="opacity:.7">${ct}×</span></div>`
-  ).join('')}</div>`:'<div style="color:var(--t2);font-size:13px">No defects recorded</div>';
-
-  // Lines worked
-  const lineSet=[...new Set(recs.map(r=>r.fields['Line Name']).filter(Boolean))];
-  const linesHTML=lineSet.length?`<div style="display:flex;flex-wrap:wrap;gap:6px">${lineSet.map(ln=>`<div style="background:var(--teal-d);border:1px solid var(--teal);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700;color:var(--teal)">${ln}</div>`).join('')}</div>`:'—';
-
-  body.innerHTML=summaryHTML+
-    `<div class="sth-sec">Day-wise Breakdown</div>`+dateHTML+
-    `<div class="sth-sec">Top Defects</div>`+defHTML+
-    `<div class="sth-sec">Lines Worked</div>`+linesHTML;
-
+  document.getElementById('sth-title').textContent=styleKey;
+  document.getElementById('sth-sub').textContent=`${row.customer||''}${row.type?' · '+row.type:''}`;
+  document.getElementById('sth-body').innerHTML='<div style="padding:30px;text-align:center;color:var(--t2);font-size:14px">Loading full history…</div>';
   document.getElementById('sth-ov').classList.add('open');
   document.getElementById('sth-sh').classList.add('open');
+  try{
+    // Fetch ALL history for this style — no date restriction
+    const rawRows=await sbGet(`qc_inspections?style=eq.${encodeURIComponent(styleKey)}&select=style,color,line_name,result,pieces_count,is_alter_reinspection,inspection_date,inspection_datetime,defect_name_en`);
+    const recs=rawRows.map(r=>({fields:{
+      'Style':r.style,'Color':r.color,'Line Name':r.line_name,'Result':r.result,
+      'Pieces Count':r.pieces_count,'Is Alter Reinspection':r.is_alter_reinspection,
+      'Inspection Date':r.inspection_date,'Inspection DateTime':r.inspection_datetime,
+      'Defect Name EN':r.defect_name_en
+    }}));
+
+    // Recalculate all-time metrics
+    let atTotal=0,atPass=0,atAlter=0,atReject=0;
+    recs.forEach(r=>{
+      const isRI=!!(r.fields['Is Alter Reinspection']);if(isRI)return;
+      const pcs=r.fields['Pieces Count']||0;const res=r.fields['Result']||'';
+      if(res==='Pass')atPass+=pcs;else if(res==='Alter')atAlter+=pcs;else if(res==='Reject')atReject+=pcs;
+      atTotal+=pcs;
+    });
+    const atDHU=atTotal>0?(((atAlter+atReject)/atTotal)*100):0;
+    document.getElementById('sth-sub').textContent=`${row.customer||''}${row.type?' · '+row.type:''}  ·  All-time DHU ${atDHU.toFixed(1)}%`;
+
+    // Summary mini-cards (all-time)
+    const summaryHTML=`<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:4px">
+      ${[['Inspected',atTotal,'var(--blu)'],['Pass',atPass,'var(--grn)'],['Alter',atAlter,'var(--org)'],['Reject',atReject,'var(--red)'],['DHU %',atDHU.toFixed(1)+'%','var(--org)']].map(([l,v,c])=>
+        `<div style="background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);padding:10px 6px;text-align:center">
+          <div style="font-size:20px;font-weight:800;color:${c};font-family:'JetBrains Mono',monospace">${v}</div>
+          <div style="font-size:10px;color:var(--t2);letter-spacing:1px;text-transform:uppercase;margin-top:3px">${l}</div>
+        </div>`
+      ).join('')}
+    </div>`;
+
+    // Day-wise breakdown (all-time)
+    const byDate={};
+    recs.forEach(r=>{
+      const dt=r.fields['Inspection Date']||r.fields['Inspection DateTime']||'';
+      const d=dt?dt.split('T')[0]:'—';
+      if(!byDate[d])byDate[d]={pass:0,alter:0,reject:0,total:0};
+      const pcs=r.fields['Pieces Count']||0;const res=r.fields['Result']||'';
+      const isRI=!!(r.fields['Is Alter Reinspection']);
+      if(!isRI){
+        if(res==='Pass')byDate[d].pass+=pcs;
+        else if(res==='Alter')byDate[d].alter+=pcs;
+        else if(res==='Reject')byDate[d].reject+=pcs;
+        byDate[d].total+=pcs;
+      }
+    });
+    const dateRows=Object.entries(byDate).filter(([d])=>d!=='—').sort((a,b)=>b[0].localeCompare(a[0]));
+    const dateHTML=dateRows.length?`<table class="lst"><thead><tr>
+      <th>Date</th><th class="nr">Inspected</th><th class="nr">Pass</th><th class="nr">Alter</th><th class="nr">Reject</th><th class="nr">DHU %</th>
+    </tr></thead><tbody>${dateRows.map(([d,v])=>{
+      const dhu2=v.total>0?(((v.alter+v.reject)/v.total)*100):0;
+      return`<tr>
+        <td style="font-weight:600">${fmtDate(d)}</td>
+        <td class="nr">${v.total}</td>
+        <td class="nr" style="color:var(--grn)">${v.pass}</td>
+        <td class="nr" style="color:var(--org)">${v.alter}</td>
+        <td class="nr" style="color:var(--red)">${v.reject}</td>
+        <td class="nr" style="color:${dhu2<10?'var(--grn)':dhu2>25?'var(--red)':'var(--org)'}">${dhu2.toFixed(1)}%</td>
+      </tr>`;
+    }).join('')}</tbody></table>`:'<div style="color:var(--t2);font-size:13px;padding:8px 0">No date data</div>';
+
+    // Top defects (all-time)
+    const defMap={};
+    recs.forEach(r=>{
+      const isRI=!!(r.fields['Is Alter Reinspection']);if(isRI)return;
+      const res=r.fields['Result']||'';if(res==='Pass')return;
+      const pcs=r.fields['Pieces Count']||0;
+      (r.fields['Defect Name EN']||'').split(',').map(d=>d.trim()).filter(Boolean)
+        .forEach(d=>{defMap[d]=(defMap[d]||0)+pcs;});
+    });
+    const topDefs=Object.entries(defMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const defHTML=topDefs.length?`<div style="display:flex;flex-wrap:wrap;gap:6px">${topDefs.map(([n,ct])=>
+      `<div style="background:var(--red-d);border:1px solid var(--red);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--red)">${n} <span style="opacity:.7">${ct}×</span></div>`
+    ).join('')}</div>`:'<div style="color:var(--t2);font-size:13px">No defects recorded</div>';
+
+    // Lines worked (all-time)
+    const lineSet=[...new Set(recs.map(r=>r.fields['Line Name']).filter(Boolean))];
+    const linesHTML=lineSet.length?`<div style="display:flex;flex-wrap:wrap;gap:6px">${lineSet.map(ln=>`<div style="background:var(--teal-d);border:1px solid var(--teal);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700;color:var(--teal)">${ln}</div>`).join('')}</div>`:'—';
+
+    document.getElementById('sth-body').innerHTML=summaryHTML+
+      `<div class="sth-sec">Day-wise Breakdown</div>`+dateHTML+
+      `<div class="sth-sec">Top Defects</div>`+defHTML+
+      `<div class="sth-sec">Lines Worked</div>`+linesHTML;
+  }catch(e){
+    document.getElementById('sth-body').innerHTML=`<div style="padding:20px;color:var(--red);font-size:13px">Error loading history: ${e.message}</div>`;
+    console.error(e);
+  }
 }
 function closeStyleHistory(){
   document.getElementById('sth-ov').classList.remove('open');
