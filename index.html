@@ -337,6 +337,13 @@ tr:hover td{background:var(--s2)}
 .svf-def-fill{height:100%;border-radius:4px}
 .svf-def-ct{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t2);min-width:28px;text-align:right}
 .svf-common-note{font-size:11px;color:var(--org);font-weight:600;margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr)}
+.svf-style-expand{display:none;background:var(--s2)}
+.svf-style-expand.open{display:table-row}
+.svf-style-expand td{padding:12px 10px}
+.svf-expand-inner{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.svf-expand-side{background:var(--s3);border-radius:6px;padding:10px 12px}
+.svf-expand-title{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t2);margin-bottom:8px}
+.svf-expand-arrow{font-size:11px;color:var(--t2);cursor:pointer;padding:2px 6px;transition:transform .2s}
 
 /* Defect chart */
 .defect-chart{margin-bottom:20px}
@@ -745,9 +752,9 @@ tr:hover td{background:var(--s2)}
             <th>Style</th><th>Customer</th>
             <th class="td-num">Sew Insp</th><th class="td-num">Sew DHU%</th>
             <th class="td-num">Fin Insp</th><th class="td-num">Fin DHU%</th>
-            <th class="td-num">△ DHU</th>
+            <th class="td-num">△ DHU</th><th></th>
           </tr></thead>
-          <tbody id="tbody-svf"><tr><td colspan="7" style="text-align:center;color:var(--t2);padding:20px">Click Refresh to load</td></tr></tbody>
+          <tbody id="tbody-svf"><tr><td colspan="8" style="text-align:center;color:var(--t2);padding:20px">Click Refresh to load</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -2282,12 +2289,16 @@ function setSvfStage(stage){
 function buildSewVsFin(qcRecs,finRecs){
   reportFinData=finRecs;
 
-  // Build stage pills from available data
-  const stages=[...new Set(finRecs.map(r=>r.fields['Stage Name']).filter(Boolean))].sort();
+  // Build stage pills — fixed order
+  const STAGE_ORDER=['Initial','Mid','Measurement','Final Check','Final Audit'];
+  const availStages=new Set(finRecs.map(r=>r.fields['Stage Name']).filter(Boolean));
+  const orderedStages=STAGE_ORDER.filter(s=>availStages.has(s));
+  // Add any stages not in the predefined order at the end
+  [...availStages].forEach(s=>{if(!STAGE_ORDER.includes(s))orderedStages.push(s);});
   const bar=document.getElementById('svf-stage-bar');
   if(bar){
-    bar.innerHTML=`<button class="svf-pill${_svfStage==='all'?' active':''}" data-stage="all" onclick="setSvfStage('all')">All Stages</button>`
-      +stages.map(s=>`<button class="svf-pill${_svfStage===s?' active':''}" data-stage="${s}" onclick="setSvfStage('${s}')">${s}</button>`).join('');
+    bar.innerHTML=orderedStages.map(s=>`<button class="svf-pill${_svfStage===s?' active':''}" data-stage="${s}" onclick="setSvfStage('${s}')">${s}</button>`).join('')
+      +`<button class="svf-pill${_svfStage==='all'?' active':''}" data-stage="all" onclick="setSvfStage('all')">All Stages</button>`;
   }
 
   // Filter finishing by selected stage
@@ -2391,9 +2402,48 @@ function buildSewVsFin(qcRecs,finRecs){
     return{style:s,customer:ss?.customer||'',sm2,fi,fd,delta};
   }).sort((a,b)=>(b.delta??-999)-(a.delta??-999));
 
+  // Build per-style defect maps for expandable rows
+  const sewStyleDefs={},finStyleDefs={};
+  qcRecs.forEach(r=>{
+    const s=r.fields['Style']||r.fields['Style ID']||'';if(!s)return;
+    const isRI=!!(r.fields['Is Alter Reinspection']);if(isRI)return;
+    const res=r.fields['Result']||'';if(res==='Pass')return;
+    const pcs=r.fields['Pieces Count']||0;
+    if(!sewStyleDefs[s])sewStyleDefs[s]={};
+    (r.fields['Defect Name EN']||'').split(',').map(d=>d.trim()).filter(Boolean).forEach(d=>{sewStyleDefs[s][d]=(sewStyleDefs[s][d]||0)+pcs;});
+  });
+  filtFin.forEach(r=>{
+    const s=r.fields['Style']||r.fields['Style ID']||'';if(!s)return;
+    const isRI=!!(r.fields['Is Reinspection']);if(isRI)return;
+    const res=r.fields['Result']||'';if(res==='Pass')return;
+    const pcs=r.fields['Pieces Count']||0;
+    if(!finStyleDefs[s])finStyleDefs[s]={};
+    (r.fields['Defect Name EN']||'').split(',').map(d=>d.trim()).filter(Boolean).forEach(d=>{finStyleDefs[s][d]=(finStyleDefs[s][d]||0)+pcs;});
+  });
+
+  const renderMiniDefs=(defMap,otherDefMap)=>{
+    const entries=Object.entries(defMap||{}).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    if(!entries.length)return'<div style="color:var(--t2);font-size:12px">No defects</div>';
+    const maxV=entries[0][1];
+    const otherSet=new Set(Object.keys(otherDefMap||{}));
+    return entries.map(([name,ct])=>{
+      const pct=(ct/maxV)*100;
+      const isCommon=otherSet.has(name);
+      return`<div class="svf-def-row">
+        <div class="svf-def-name" style="color:${isCommon?'var(--org)':'var(--t1)'};font-weight:${isCommon?700:400}" title="${name}">${name}</div>
+        <div class="svf-def-track"><div class="svf-def-fill" style="width:${pct}%;background:${isCommon?'var(--org)':'var(--red)'}"></div></div>
+        <div class="svf-def-ct">${ct}</div>
+      </div>`;
+    }).join('');
+  };
+
   const tbody=document.getElementById('tbody-svf');
   if(!tbody)return;
-  tbody.innerHTML=tableRows.length?tableRows.map(r=>{
+  if(!tableRows.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--t2);padding:20px">No data</td></tr>';return;}
+
+  let html='';
+  tableRows.forEach((r,i)=>{
+    const gid='svf-ex-'+i;
     const sewI=r.sm2?r.sm2.total:'—';
     const sewD=r.sm2?r.sm2.dhu.toFixed(1)+'%':'—';
     const finI=r.fi>0?r.fi:'—';
@@ -2404,7 +2454,7 @@ function buildSewVsFin(qcRecs,finRecs){
       dCol=r.delta>5?'var(--red)':r.delta>0?'var(--org)':'var(--grn)';
     }
     const dIcon=r.delta===null?'':r.delta>5?' ⚠':r.delta>0?' ↑':' ↓';
-    return`<tr>
+    html+=`<tr style="cursor:pointer" onclick="toggleSvfExpand('${gid}',this)">
       <td style="font-weight:600">${r.style}</td>
       <td style="color:var(--t2)">${r.customer}</td>
       <td class="td-num">${sewI}</td>
@@ -2412,8 +2462,35 @@ function buildSewVsFin(qcRecs,finRecs){
       <td class="td-num">${finI}</td>
       <td class="td-num" style="color:var(--teal)">${finD}</td>
       <td class="td-num" style="color:${dCol};font-weight:700">${dStr}${dIcon}</td>
+      <td class="td-num"><span class="svf-expand-arrow" id="${gid}-arr">▾</span></td>
     </tr>`;
-  }).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--t2);padding:20px">No data</td></tr>';
+    // Expandable defect row
+    const sDefs=sewStyleDefs[r.style]||{};
+    const fDefs=finStyleDefs[r.style]||{};
+    html+=`<tr class="svf-style-expand" id="${gid}">
+      <td colspan="8">
+        <div class="svf-expand-inner">
+          <div class="svf-expand-side">
+            <div class="svf-expand-title">🪡 Sewing Defects</div>
+            ${renderMiniDefs(sDefs,fDefs)}
+          </div>
+          <div class="svf-expand-side">
+            <div class="svf-expand-title">✂️ Finishing Defects</div>
+            ${renderMiniDefs(fDefs,sDefs)}
+          </div>
+        </div>
+      </td>
+    </tr>`;
+  });
+  tbody.innerHTML=html;
+}
+
+function toggleSvfExpand(gid,rowEl){
+  const expRow=document.getElementById(gid);
+  const arr=document.getElementById(gid+'-arr');
+  if(!expRow)return;
+  const open=expRow.classList.toggle('open');
+  if(arr)arr.textContent=open?'▴':'▾';
 }
 
 function showTab(name){
