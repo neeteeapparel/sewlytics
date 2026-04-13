@@ -305,10 +305,8 @@ tr:hover td{background:var(--s2)}
 .rank-3{background:rgba(167,139,250,.15);color:var(--pur);border:1px solid var(--pur)}
 .rank-n{background:var(--s3);color:var(--t2);border:1px solid var(--bdr)}
 /* Line expand */
-.line-expand-row{display:none}
-.line-expand-row.open{display:table-row}
-.line-expand-inner{background:var(--s2);padding:4px 0 8px 48px;border-bottom:1px solid var(--bdr)}
-.line-expand-inner .lst{table-layout:fixed}
+.style-sub-row{display:none;background:var(--s2)}
+.style-sub-row.open{display:table-row}
 .lst{width:100%;font-size:13px;border-collapse:collapse}
 .lst td,.lst th{padding:6px 12px;border-bottom:1px solid var(--bdr)}
 .lst tr:last-child td{border-bottom:none}
@@ -1930,7 +1928,6 @@ function buildLineTable(recs,aqRecs){
     const m=calcMetrics(s.recs);
     const lineAQ=(aqRecs||[]).filter(r=>r.fields['Line Name']===s.lineName);
     const ar=calcAQPassRate(lineAQ);
-    // Styles worked on this line
     const styleMap={};
     s.recs.forEach(r=>{
       const sid=r.fields['Style']||r.fields['Style ID']||'';if(!sid)return;
@@ -1938,7 +1935,10 @@ function buildLineTable(recs,aqRecs){
       styleMap[sid].recs.push(r);
     });
     const styles=Object.values(styleMap).map(sm=>{
-      const sm2=calcMetrics(sm.recs);return{style:sm.style,...sm2};
+      const sm2=calcMetrics(sm.recs);
+      // Alter pass rate per style on this line
+      const sAQ=(aqRecs||[]).filter(r=>r.fields['Line Name']===s.lineName&&(r.fields['Style']===sm.style||r.fields['Style ID']===sm.style));
+      return{style:sm.style,...sm2,altPassRate:calcAQPassRate(sAQ)};
     }).sort((a,b)=>b.total-a.total);
     return{...s,...m,altPassRate:ar,styles};
   });
@@ -1950,9 +1950,12 @@ function buildLineTable(recs,aqRecs){
     const rank=i+1;
     const rc=rank===1?'rank-1':rank===2?'rank-2':rank===3?'rank-3':'rank-n';
     const cls=r.dhu<10?'good':r.dhu>25?'bad':'';
-    const eid=`le-${r.lineName.replace(/\W/g,'_')}`;
+    const gid=`lg-${r.lineName.replace(/\W/g,'_')}`;
+    let expanded=false;
+    // ── Line row ──
     const tr=document.createElement('tr');
     tr.style.cursor='pointer';tr.title='Click to expand styles';
+    const styleCountCell=`<span class="style-count-lbl">${r.styles.length} style${r.styles.length!==1?'s':''} ▾</span>`;
     tr.innerHTML=`<td><span class="rank-badge ${rc}">${rank}</span></td>
       <td style="font-weight:600">${r.lineName}</td>
       <td style="color:var(--t2)">${r.floor}</td>
@@ -1962,27 +1965,33 @@ function buildLineTable(recs,aqRecs){
       <td class="td-num td-rej">${r.reject}</td>
       <td><div class="dhu-bar"><div class="dhu-track"><div class="dhu-fill ${cls}" style="width:${Math.min((r.dhu/maxDHU)*100,100)}%"></div></div><span class="td-dhu" style="min-width:48px">${r.dhu.toFixed(1)}%</span></div></td>
       <td class="td-num" style="color:var(--pur)">${r.altPassRate!=null?r.altPassRate.toFixed(0)+'%':'—'}</td>
-      <td style="color:var(--teal);font-size:12px;font-weight:600;white-space:nowrap">${r.styles.length} style${r.styles.length!==1?'s':''} ▾</td>`;
-    tr.addEventListener('click',()=>{const e=document.getElementById(eid);if(e)e.classList.toggle('open');});
+      <td style="color:var(--teal);font-size:12px;font-weight:600;white-space:nowrap">${styleCountCell}</td>`;
+    tr.addEventListener('click',()=>{
+      expanded=!expanded;
+      tbody.querySelectorAll(`tr[data-group="${gid}"]`).forEach(el=>el.classList.toggle('open',expanded));
+      const lbl=tr.querySelector('.style-count-lbl');
+      if(lbl)lbl.textContent=`${r.styles.length} style${r.styles.length!==1?'s':''} ${expanded?'▴':'▾'}`;
+    });
     tbody.appendChild(tr);
-    // Expandable style sub-rows
-    const expTr=document.createElement('tr');expTr.id=eid;expTr.className='line-expand-row';
-    expTr.innerHTML=`<td colspan="10" style="padding:0">
-      <div class="line-expand-inner">
-        <table class="lst">
-          <thead><tr><th style="width:40%">Style</th><th class="nr" style="width:12%">Inspected</th><th class="nr" style="width:10%">Pass</th><th class="nr" style="width:10%">Alter</th><th class="nr" style="width:10%">Reject</th><th class="nr" style="width:18%">DHU %</th></tr></thead>
-          <tbody>${r.styles.map(s=>`<tr>
-            <td style="font-weight:600">${s.style}</td>
-            <td class="nr">${s.total}</td>
-            <td class="nr" style="color:var(--grn)">${s.pass}</td>
-            <td class="nr" style="color:var(--org)">${s.alter}</td>
-            <td class="nr" style="color:var(--red)">${s.reject}</td>
-            <td class="nr" style="color:${s.dhu<10?'var(--grn)':s.dhu>25?'var(--red)':'var(--org)'};font-weight:700">${s.dhu.toFixed(1)}%</td>
-          </tr>`).join('')}</tbody>
-        </table>
-      </div>
-    </td>`;
-    tbody.appendChild(expTr);
+    // ── Style sub-rows (same tbody, same columns, no nested table) ──
+    r.styles.forEach(s=>{
+      const dc=s.dhu<10?'var(--grn)':s.dhu>25?'var(--red)':'var(--org)';
+      const subTr=document.createElement('tr');
+      subTr.className='style-sub-row';
+      subTr.setAttribute('data-group',gid);
+      subTr.innerHTML=`
+        <td></td>
+        <td style="padding-left:24px;font-size:12px;font-weight:600;border-left:3px solid var(--bdr);color:var(--t1)">↳ ${s.style}</td>
+        <td></td>
+        <td class="td-num" style="font-size:12px">${s.total}</td>
+        <td class="td-num td-pass" style="font-size:12px">${s.pass}</td>
+        <td class="td-num td-alt" style="font-size:12px">${s.alter}</td>
+        <td class="td-num td-rej" style="font-size:12px">${s.reject}</td>
+        <td class="td-num" style="font-size:12px;color:${dc};font-weight:700">${s.dhu.toFixed(1)}%</td>
+        <td class="td-num" style="font-size:12px;color:var(--pur)">${s.altPassRate!=null?s.altPassRate.toFixed(0)+'%':'—'}</td>
+        <td></td>`;
+      tbody.appendChild(subTr);
+    });
   });
 }
 
