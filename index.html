@@ -321,6 +321,23 @@ tr:hover td{background:var(--s2)}
 .sth-body{flex:1;overflow-y:auto;padding:16px 20px 32px}
 .sth-sec{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);font-weight:600;margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--bdr)}
 
+/* Sew vs Fin tab */
+.svf-split{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.svf-panel{background:var(--s2);border:1px solid var(--bdr);border-radius:var(--rs);padding:16px}
+.svf-panel-hdr{font-size:13px;font-weight:700;letter-spacing:.5px;margin-bottom:12px;color:var(--t1);display:flex;align-items:center;gap:8px}
+.svf-sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.svf-card{background:var(--s3);border-radius:6px;padding:10px 8px;text-align:center}
+.svf-card-val{font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace}
+.svf-card-lbl{font-size:10px;color:var(--t2);letter-spacing:1px;text-transform:uppercase;margin-top:3px}
+.svf-pill{background:var(--s2);border:1px solid var(--bdr);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--t2);transition:all .2s}
+.svf-pill.active{background:var(--teal);border-color:var(--teal);color:#fff}
+.svf-def-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.svf-def-name{font-size:12px;width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
+.svf-def-track{flex:1;height:8px;background:var(--s3);border-radius:4px;overflow:hidden}
+.svf-def-fill{height:100%;border-radius:4px}
+.svf-def-ct{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t2);min-width:28px;text-align:right}
+.svf-common-note{font-size:11px;color:var(--org);font-weight:600;margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr)}
+
 /* Defect chart */
 .defect-chart{margin-bottom:20px}
 .def-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
@@ -612,6 +629,7 @@ tr:hover td{background:var(--s2)}
       <button class="mtab" onclick="showTab('line')">Line Ranking</button>
       <button class="mtab" onclick="showTab('defect')">Defect Analysis</button>
       <button class="mtab" onclick="showTab('alter')">Alter TAT</button>
+      <button class="mtab" onclick="showTab('svf')">Sew vs Fin</button>
     </div>
 
     <!-- TAB: STYLE DHU -->
@@ -684,6 +702,52 @@ tr:hover td{background:var(--s2)}
             <th class="td-num">TAT Hrs</th>
           </tr></thead>
           <tbody id="tbody-alter"><tr><td colspan="7" style="text-align:center;color:var(--t2);padding:20px">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: SEW VS FIN -->
+    <div class="tab-panel" id="tab-svf">
+      <!-- Stage selector -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--t2);font-weight:600;letter-spacing:1px;text-transform:uppercase;white-space:nowrap">Finishing Stage:</span>
+        <div id="svf-stage-bar" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      </div>
+      <!-- Summary panels -->
+      <div class="svf-split">
+        <div class="svf-panel">
+          <div class="svf-panel-hdr">🪡 Sewing QC</div>
+          <div id="svf-sew-summary"></div>
+        </div>
+        <div class="svf-panel">
+          <div class="svf-panel-hdr">✂️ Finishing QC</div>
+          <div id="svf-fin-summary"></div>
+        </div>
+      </div>
+      <!-- Defect comparison -->
+      <div class="svf-split">
+        <div class="svf-panel">
+          <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);font-weight:600;margin-bottom:10px">Top Sewing Defects</div>
+          <div id="svf-sew-defects"></div>
+        </div>
+        <div class="svf-panel">
+          <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);font-weight:600;margin-bottom:10px">Top Finishing Defects</div>
+          <div id="svf-fin-defects"></div>
+        </div>
+      </div>
+      <!-- Common defect note -->
+      <div id="svf-common-note"></div>
+      <!-- Style comparison table -->
+      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--t2);font-weight:600;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--bdr)">Style-wise Comparison</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Style</th><th>Customer</th>
+            <th class="td-num">Sew Insp</th><th class="td-num">Sew DHU%</th>
+            <th class="td-num">Fin Insp</th><th class="td-num">Fin DHU%</th>
+            <th class="td-num">△ DHU</th>
+          </tr></thead>
+          <tbody id="tbody-svf"><tr><td colspan="7" style="text-align:center;color:var(--t2);padding:20px">Click Refresh to load</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -861,7 +925,8 @@ let alterQueue=[], selectedStyle=null, selectedLine=null, pieceCount=1;
 let pendingAction=null, selectedDefects=[], sessionId='S'+Date.now();
 let _sewDefectFreq={};
 let actionCooldown=false, detailOpen=false;
-let reportData=[], reportAlter=[];
+let reportData=[], reportAlter=[], reportFinData=[];
+let _svfStage='all';
 
 // ═══════════════════════════════════════════
 // TRANSLATIONS
@@ -1743,7 +1808,10 @@ async function loadReport(){
     let aqPath=`alter_queue?date_sent=gte.${d1}&date_sent=lte.${d2}&select=style_id,style,line_name,status,pieces_count,date_sent,reinspection_datetime,tat_hours,defect_name_en,customer`;
     if(fline)  aqPath+=`&line_name=eq.${encodeURIComponent(fline)}`;
     if(fstyle) aqPath+=`&style=eq.${encodeURIComponent(fstyle)}`;
-    const [qcRows,aqRows]=await Promise.all([sbGet(qcPath),sbGet(aqPath)]);
+    let finPath=`finishing_inspections?inspection_datetime=gte.${d1iso}&inspection_datetime=lte.${d2iso}&select=style_id,style,color,stage_name,result,line_name,defect_name_en,defect_category,pieces_count,is_reinspection`;
+    if(fline)  finPath+=`&line_name=eq.${encodeURIComponent(fline)}`;
+    if(fstyle) finPath+=`&style=eq.${encodeURIComponent(fstyle)}`;
+    const [qcRows,aqRows,finRows]=await Promise.all([sbGet(qcPath),sbGet(aqPath),sbGet(finPath)]);
     // Wrap into Airtable-compatible shape so all downstream functions work unchanged
     const qcRecs=qcRows.map(r=>({fields:{
       'Style ID':r.style_id,'Style':r.style,'Color':r.color,'PO':r.po,
@@ -1760,7 +1828,13 @@ async function loadReport(){
       'Reinspection DateTime':r.reinspection_datetime,'TAT Hours':r.tat_hours,
       'Defect Name EN':r.defect_name_en,'Customer':r.customer
     }}));
-    reportData=qcRecs;reportAlter=aqRecs;
+    const finRecs=finRows.map(r=>({fields:{
+      'Style ID':r.style_id,'Style':r.style,'Color':r.color,'Stage Name':r.stage_name,
+      'Result':r.result,'Line Name':r.line_name,
+      'Defect Name EN':r.defect_name_en,'Defect Category':r.defect_category,
+      'Pieces Count':r.pieces_count,'Is Reinspection':r.is_reinspection
+    }}));
+    reportData=qcRecs;reportAlter=aqRecs;reportFinData=finRecs;
 
     // Populate customer filter from date-range data
     const custs=[...new Set(qcRecs.map(r=>r.fields['Customer']).filter(Boolean))].sort();
@@ -1780,6 +1854,7 @@ async function loadReport(){
     buildLineTable(qcRecs,aqRecs);
     buildDefectChart(qcRecs);
     buildAlterTable(aqRecs);
+    buildSewVsFin(qcRecs,finRecs);
     hideLoad();
   }catch(e){hideLoad();showToast('Report error: '+e.message,'reject');console.error(e);}
 }
@@ -2198,11 +2273,154 @@ function checkDateRange(){
   }
 }
 
+function setSvfStage(stage){
+  _svfStage=stage;
+  document.querySelectorAll('.svf-pill').forEach(p=>p.classList.toggle('active',p.dataset.stage===stage));
+  buildSewVsFin(reportData,reportFinData);
+}
+
+function buildSewVsFin(qcRecs,finRecs){
+  reportFinData=finRecs;
+
+  // Build stage pills from available data
+  const stages=[...new Set(finRecs.map(r=>r.fields['Stage Name']).filter(Boolean))].sort();
+  const bar=document.getElementById('svf-stage-bar');
+  if(bar){
+    bar.innerHTML=`<button class="svf-pill${_svfStage==='all'?' active':''}" data-stage="all" onclick="setSvfStage('all')">All Stages</button>`
+      +stages.map(s=>`<button class="svf-pill${_svfStage===s?' active':''}" data-stage="${s}" onclick="setSvfStage('${s}')">${s}</button>`).join('');
+  }
+
+  // Filter finishing by selected stage
+  const filtFin=_svfStage==='all'?finRecs:finRecs.filter(r=>r.fields['Stage Name']===_svfStage);
+
+  // ── Sewing metrics ──
+  const sm=calcMetrics(qcRecs);
+
+  // ── Finishing metrics (different reinspection field) ──
+  let fInsp=0,fPass=0,fAlter=0,fReject=0;
+  filtFin.forEach(r=>{
+    const isRI=!!(r.fields['Is Reinspection']);if(isRI)return;
+    const pcs=r.fields['Pieces Count']||0;const res=r.fields['Result']||'';
+    if(res==='Pass')fPass+=pcs;else if(res==='Alter')fAlter+=pcs;else if(res==='Reject')fReject+=pcs;
+    fInsp+=pcs;
+  });
+  const fDHU=fInsp>0?(((fAlter+fReject)/fInsp)*100):0;
+
+  // ── Summary cards ──
+  const card=(val,lbl,col)=>`<div class="svf-card"><div class="svf-card-val" style="color:${col}">${val}</div><div class="svf-card-lbl">${lbl}</div></div>`;
+  document.getElementById('svf-sew-summary').innerHTML=`<div class="svf-sum-grid">
+    ${card(sm.total,'Inspected','var(--blu)')}${card(sm.pass,'Pass','var(--grn)')}${card(sm.alter,'Alter','var(--org)')}
+    ${card(sm.reject,'Reject','var(--red)')}${card(sm.rp,'Re-Pass','var(--teal)')}${card(sm.dhu.toFixed(1)+'%','DHU %','var(--org)')}
+  </div>`;
+  document.getElementById('svf-fin-summary').innerHTML=`<div class="svf-sum-grid">
+    ${card(fInsp,'Inspected','var(--blu)')}${card(fPass,'Pass','var(--grn)')}${card(fAlter,'Alter','var(--org)')}
+    ${card(fReject,'Reject','var(--red)')}${card('—','Re-Pass','var(--t2)')}${card(fDHU.toFixed(1)+'%','DHU %','var(--org)')}
+  </div>`;
+
+  // ── Defect maps ──
+  const sewDef={},finDef={};
+  qcRecs.forEach(r=>{
+    const isRI=!!(r.fields['Is Alter Reinspection']);if(isRI)return;
+    const res=r.fields['Result']||'';if(res==='Pass')return;
+    const pcs=r.fields['Pieces Count']||0;
+    (r.fields['Defect Name EN']||'').split(',').map(d=>d.trim()).filter(Boolean).forEach(d=>{sewDef[d]=(sewDef[d]||0)+pcs;});
+  });
+  filtFin.forEach(r=>{
+    const isRI=!!(r.fields['Is Reinspection']);if(isRI)return;
+    const res=r.fields['Result']||'';if(res==='Pass')return;
+    const pcs=r.fields['Pieces Count']||0;
+    (r.fields['Defect Name EN']||'').split(',').map(d=>d.trim()).filter(Boolean).forEach(d=>{finDef[d]=(finDef[d]||0)+pcs;});
+  });
+  const topSew=Object.entries(sewDef).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const topFin=Object.entries(finDef).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const sewSet=new Set(topSew.map(([n])=>n));
+  const finSet=new Set(topFin.map(([n])=>n));
+  const maxSew=topSew[0]?topSew[0][1]:1;
+  const maxFin=topFin[0]?topFin[0][1]:1;
+
+  const renderDefs=(items,maxV,otherSet,elId)=>{
+    const el=document.getElementById(elId);
+    if(!el)return;
+    if(!items.length){el.innerHTML='<div style="color:var(--t2);font-size:13px;padding:8px 0">No defects in this period</div>';return;}
+    el.innerHTML=items.map(([name,ct])=>{
+      const pct=(ct/maxV)*100;
+      const isCommon=otherSet.has(name);
+      const col=isCommon?'var(--org)':'var(--red)';
+      return`<div class="svf-def-row">
+        <div class="svf-def-name" style="color:${isCommon?'var(--org)':'var(--t1)'};font-weight:${isCommon?700:400}" title="${name}">${name}</div>
+        <div class="svf-def-track"><div class="svf-def-fill" style="width:${pct}%;background:${col}"></div></div>
+        <div class="svf-def-ct">${ct}</div>
+      </div>`;
+    }).join('');
+  };
+  renderDefs(topSew,maxSew,finSet,'svf-sew-defects');
+  renderDefs(topFin,maxFin,sewSet,'svf-fin-defects');
+
+  // Common defect note
+  const commonNames=[...sewSet].filter(n=>finSet.has(n));
+  const noteEl=document.getElementById('svf-common-note');
+  if(noteEl)noteEl.innerHTML=commonNames.length
+    ?`<div class="svf-common-note">⚠ ${commonNames.length} defect${commonNames.length>1?'s':''} appear in both sewing & finishing (shown in orange): ${commonNames.join(', ')}</div>`
+    :'';
+
+  // ── Style comparison table ──
+  const sewStyleMap={},finStyleMap={};
+  qcRecs.forEach(r=>{
+    const s=r.fields['Style']||r.fields['Style ID']||'';if(!s)return;
+    if(!sewStyleMap[s])sewStyleMap[s]={style:s,customer:r.fields['Customer']||'',recs:[]};
+    sewStyleMap[s].recs.push(r);
+  });
+  filtFin.forEach(r=>{
+    const s=r.fields['Style']||r.fields['Style ID']||'';if(!s)return;
+    if(!finStyleMap[s])finStyleMap[s]={style:s,recs:[]};
+    finStyleMap[s].recs.push(r);
+  });
+  const allStyles=[...new Set([...Object.keys(sewStyleMap),...Object.keys(finStyleMap)])];
+  const tableRows=allStyles.map(s=>{
+    const ss=sewStyleMap[s];const fs=finStyleMap[s];
+    const sm2=ss?calcMetrics(ss.recs):null;
+    let fi=0,fa=0,fr=0;
+    if(fs)fs.recs.forEach(r=>{
+      const isRI=!!(r.fields['Is Reinspection']);if(isRI)return;
+      const pcs=r.fields['Pieces Count']||0;const res=r.fields['Result']||'';
+      if(res==='Alter')fa+=pcs;else if(res==='Reject')fr+=pcs;
+      fi+=pcs;
+    });
+    const fd=fi>0?(((fa+fr)/fi)*100):null;
+    const delta=(sm2&&fd!==null)?fd-sm2.dhu:null;
+    return{style:s,customer:ss?.customer||'',sm2,fi,fd,delta};
+  }).sort((a,b)=>(b.delta??-999)-(a.delta??-999));
+
+  const tbody=document.getElementById('tbody-svf');
+  if(!tbody)return;
+  tbody.innerHTML=tableRows.length?tableRows.map(r=>{
+    const sewI=r.sm2?r.sm2.total:'—';
+    const sewD=r.sm2?r.sm2.dhu.toFixed(1)+'%':'—';
+    const finI=r.fi>0?r.fi:'—';
+    const finD=r.fd!==null?r.fd.toFixed(1)+'%':'—';
+    let dStr='—',dCol='var(--t2)';
+    if(r.delta!==null){
+      dStr=(r.delta>0?'+':'')+r.delta.toFixed(1)+'%';
+      dCol=r.delta>5?'var(--red)':r.delta>0?'var(--org)':'var(--grn)';
+    }
+    const dIcon=r.delta===null?'':r.delta>5?' ⚠':r.delta>0?' ↑':' ↓';
+    return`<tr>
+      <td style="font-weight:600">${r.style}</td>
+      <td style="color:var(--t2)">${r.customer}</td>
+      <td class="td-num">${sewI}</td>
+      <td class="td-num" style="color:var(--org)">${sewD}</td>
+      <td class="td-num">${finI}</td>
+      <td class="td-num" style="color:var(--teal)">${finD}</td>
+      <td class="td-num" style="color:${dCol};font-weight:700">${dStr}${dIcon}</td>
+    </tr>`;
+  }).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--t2);padding:20px">No data</td></tr>';
+}
+
 function showTab(name){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
-  const tabs={style:0,line:1,defect:2,alter:3};
+  const tabs={style:0,line:1,defect:2,alter:3,svf:4};
   document.querySelectorAll('.mtab')[tabs[name]].classList.add('active');
 }
 
