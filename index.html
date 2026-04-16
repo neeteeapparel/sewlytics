@@ -345,6 +345,45 @@ tr:hover td{background:var(--s2)}
 .svf-expand-title{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t2);margin-bottom:8px}
 .svf-expand-arrow{font-size:11px;color:var(--t2);cursor:pointer;padding:2px 6px;transition:transform .2s}
 
+/* ── ADMIN PANEL ── */
+#admin-app{display:none;flex-direction:column;min-height:100vh}
+.adm-hdr{background:var(--s1);border-bottom:1px solid var(--bdr);padding:12px 20px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;flex-shrink:0}
+.adm-brand{font-size:17px;font-weight:800;letter-spacing:2px;color:var(--pur)}
+.adm-body{display:flex;flex:1;min-height:0;overflow:hidden}
+.adm-sidebar{width:180px;background:var(--s1);border-right:1px solid var(--bdr);padding:10px 8px;display:flex;flex-direction:column;gap:3px;flex-shrink:0;overflow-y:auto}
+.adm-nav-btn{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;border:none;background:transparent;color:var(--t2);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;width:100%;text-align:left;transition:all .2s}
+.adm-nav-btn:hover{background:var(--s2);color:var(--text)}
+.adm-nav-btn.active{background:var(--pur-d);color:var(--pur)}
+.adm-content{flex:1;padding:24px;overflow-y:auto}
+.adm-sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.adm-sec-title{font-size:18px;font-weight:700}
+.adm-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.adm-tbl th{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);font-weight:600;padding:8px 12px;border-bottom:2px solid var(--bdr);text-align:left;white-space:nowrap}
+.adm-tbl td{padding:10px 12px;border-bottom:1px solid var(--bdr);vertical-align:middle}
+.adm-tbl tr:hover td{background:var(--s2)}
+.adm-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.adm-modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.adm-modal-ov.open{display:flex}
+.adm-modal{background:var(--s1);border-radius:16px;padding:24px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto}
+.adm-modal-hdr{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--pur)}
+.adm-field{margin-bottom:12px}
+.adm-field label{display:block;font-size:11px;font-weight:700;color:var(--t2);margin-bottom:4px;letter-spacing:.5px;text-transform:uppercase}
+.adm-field input,.adm-field select{width:100%;padding:9px 12px;border:1px solid var(--bdr);border-radius:8px;font-family:inherit;font-size:14px;background:var(--s2);color:var(--text);transition:border-color .2s}
+.adm-field input:focus,.adm-field select:focus{outline:none;border-color:var(--pur)}
+.adm-toggle{position:relative;width:42px;height:22px;display:inline-block;vertical-align:middle}
+.adm-toggle input{opacity:0;width:0;height:0}
+.adm-toggle-slider{position:absolute;inset:0;background:#d1d5db;border-radius:11px;transition:.3s;cursor:pointer}
+.adm-toggle-slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.adm-toggle input:checked+.adm-toggle-slider{background:var(--grn)}
+.adm-toggle input:checked+.adm-toggle-slider:before{transform:translateX(20px)}
+.btn-primary{background:var(--pur);border:none;border-radius:8px;color:#fff;font-family:inherit;font-size:13px;font-weight:700;padding:8px 16px;cursor:pointer;transition:opacity .2s}
+.btn-primary:hover{opacity:.85}
+.view-as-wrap{display:flex;gap:6px;align-items:center;margin-left:auto}
+.view-as-lbl{font-size:11px;color:var(--t2);font-weight:600;letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
+.view-as-pill{padding:4px 12px;border-radius:20px;border:1px solid var(--bdr);background:var(--s2);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;color:var(--t2);transition:all .2s}
+.view-as-pill:hover{border-color:var(--pur);color:var(--pur)}
+.btn-back-admin{background:var(--pur-d);border:1px solid var(--pur);border-radius:20px;color:var(--pur);font-family:inherit;font-size:12px;font-weight:700;padding:4px 12px;cursor:pointer;display:none}
+
 /* Defect chart */
 .defect-chart{margin-bottom:20px}
 .def-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
@@ -401,6 +440,7 @@ tr:hover td{background:var(--s2)}
         <button class="lang-btn active" onclick="setLang('en')" id="ben">EN</button>
         <button class="lang-btn" onclick="setLang('hi')" id="bhi">हि</button>
       </div>
+      <button class="btn-back-admin" id="btn-back-admin-chk" onclick="goBackToAdmin()">⚙ Admin</button>
       <button class="btn-sm" onclick="doLogout()">Exit</button>
     </div>
   </div>
@@ -571,6 +611,7 @@ tr:hover td{background:var(--s2)}
     <div class="brand">SEWLYTICS</div>
     <div style="display:flex;gap:8px;align-items:center">
       <div class="role-badge">MANAGER</div>
+      <button class="btn-back-admin" id="btn-back-admin-mgr" onclick="goBackToAdmin()">⚙ Admin</button>
       <button class="btn-sm" onclick="doLogout()">Exit</button>
     </div>
   </div>
@@ -762,6 +803,43 @@ tr:hover td{background:var(--s2)}
   </div>
 </div>
 
+<!-- ADMIN APP -->
+<div id="admin-app">
+  <div class="adm-hdr">
+    <div class="adm-brand">⚙ ADMIN</div>
+    <div class="view-as-wrap">
+      <span class="view-as-lbl">View As:</span>
+      <button class="view-as-pill" onclick="viewAs('manager')">📊 Manager</button>
+      <button class="view-as-pill" onclick="viewAs('checker')">🪡 Checker</button>
+      <button class="view-as-pill" onclick="viewAs('finishing')">✂️ Finishing</button>
+    </div>
+    <button class="btn-sm" onclick="doLogout()" style="margin-left:8px">Exit</button>
+  </div>
+  <div class="adm-body">
+    <div class="adm-sidebar">
+      <button class="adm-nav-btn active" id="adm-nav-users"   onclick="showAdminSection('users')">👤 Users</button>
+      <button class="adm-nav-btn"        id="adm-nav-lines"   onclick="showAdminSection('lines')">🏭 Lines</button>
+      <button class="adm-nav-btn"        id="adm-nav-orders"  onclick="showAdminSection('orders')">📦 Orders</button>
+      <button class="adm-nav-btn"        id="adm-nav-defects" onclick="showAdminSection('defects')">🔍 Defects</button>
+      <button class="adm-nav-btn"        id="adm-nav-stages"  onclick="showAdminSection('stages')">✂️ Fin Stages</button>
+    </div>
+    <div class="adm-content" id="adm-content">
+      <div style="color:var(--t2);font-size:14px">Select a section from the left.</div>
+    </div>
+  </div>
+</div>
+<!-- ADMIN MODAL -->
+<div class="adm-modal-ov" id="adm-modal-ov" onclick="if(event.target===this)closeAdmModal()">
+  <div class="adm-modal">
+    <div class="adm-modal-hdr" id="adm-modal-title">Add</div>
+    <div id="adm-modal-body"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+      <button class="btn-sm" onclick="closeAdmModal()">Cancel</button>
+      <button class="btn-primary" id="adm-modal-save-btn" onclick="saveAdmModal()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- STYLE HISTORY SHEET -->
 <div class="sth-ov" id="sth-ov" onclick="closeStyleHistory()"></div>
 <div class="sth-sheet" id="sth-sh">
@@ -785,6 +863,7 @@ tr:hover td{background:var(--s2)}
     <div class="hdr-brand">Sewlytics</div>
     <div class="hdr-right">
       <div class="save-dot" id="fin-sdot"></div>
+      <button class="btn-back-admin" id="btn-back-admin-fin" onclick="goBackToAdmin()">⚙ Admin</button>
       <button class="btn-sm" onclick="doLogout()">Logout</button>
     </div>
   </div>
@@ -934,6 +1013,7 @@ let _sewDefectFreq={};
 let actionCooldown=false, detailOpen=false;
 let reportData=[], reportAlter=[], reportFinData=[];
 let _svfStage='all';
+let viewAsRole=null, _admSection='users', _admEditId=null;
 
 // ═══════════════════════════════════════════
 // TRANSLATIONS
@@ -1045,10 +1125,11 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none')doLogin();
 });
 function doLogout(){
-  sessionStorage.removeItem('sw_user');currentUser=null;
+  sessionStorage.removeItem('sw_user');currentUser=null;viewAsRole=null;
   document.getElementById('app').style.display='none';
   document.getElementById('mgr-app').style.display='none';
   document.getElementById('finishing-app').style.display='none';
+  document.getElementById('admin-app').style.display='none';
   showLogin();hideLoad();
 }
 
@@ -1057,36 +1138,54 @@ function doLogout(){
 // ═══════════════════════════════════════════
 async function initApp(){
   const rawRole=(currentUser.role||'').toLowerCase().trim();
-  const isMgr=rawRole.includes('admin')||rawRole.includes('manager');
-  const isFin=rawRole.includes('finishing');
-  console.log('User role:', currentUser.role, '→ isMgr:', isMgr, 'isFin:', isFin);
+  const isAdmin=rawRole==='admin';
+  const effectiveRole=viewAsRole||rawRole;
+  const isMgr=effectiveRole.includes('manager')||(isAdmin&&!viewAsRole);
+  const isFin=effectiveRole.includes('finishing');
   showLoad('Loading data...');
   try{
-    if(isMgr){
+    if(isAdmin&&!viewAsRole){
       await Promise.all([loadOrders(),loadLines(),loadDefects()]);
+      hideLoad();hideLogin();
+      document.getElementById('admin-app').style.display='flex';
+      showAdminSection('users');
+    } else if(isMgr){
+      await Promise.all([loadOrders(),loadLines(),loadDefects()]);
+      hideLoad();hideLogin();
+      document.getElementById('mgr-app').style.display='flex';
+      if(isAdmin) document.getElementById('btn-back-admin-mgr').style.display='';
+      initManagerFilters();loadReport();
     } else if(isFin){
       await Promise.all([loadOrders(),loadLines(),loadDefects(),loadFinishingStages()]);
-    } else {
-      await Promise.all([loadOrders(),loadLines(),loadDefects(),loadAlterQueue()]);
-    }
-    hideLoad();hideLogin();
-    if(isMgr){
-      document.getElementById('mgr-app').style.display='flex';
-      initManagerFilters();
-      loadReport();
-    } else if(isFin){
+      hideLoad();hideLogin();
       document.getElementById('finishing-app').style.display='flex';
+      if(isAdmin) document.getElementById('btn-back-admin-fin').style.display='';
       initFinishingScreen();
     } else {
+      await Promise.all([loadOrders(),loadLines(),loadDefects(),loadAlterQueue()]);
+      hideLoad();hideLogin();
       document.getElementById('app').style.display='flex';
+      if(isAdmin) document.getElementById('btn-back-admin-chk').style.display='';
       document.getElementById('cn').textContent=currentUser.fullName;
       document.getElementById('cli').textContent=currentUser.assignedLine||'All Lines';
-      populateStyleDD();
-      applyTrans();
+      populateStyleDD();applyTrans();
     }
   }catch(e){
     hideLoad();showToast('Error loading data','reject');console.error(e);
   }
+}
+
+async function viewAs(role){
+  viewAsRole=role;
+  document.getElementById('admin-app').style.display='none';
+  await initApp();
+}
+
+function goBackToAdmin(){
+  viewAsRole=null;
+  ['mgr-app','finishing-app','app'].forEach(id=>document.getElementById(id).style.display='none');
+  ['btn-back-admin-mgr','btn-back-admin-fin','btn-back-admin-chk'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('admin-app').style.display='flex';
 }
 
 // ═══════════════════════════════════════════
@@ -2491,6 +2590,267 @@ function toggleSvfExpand(gid,rowEl){
   if(!expRow)return;
   const open=expRow.classList.toggle('open');
   if(arr)arr.textContent=open?'▴':'▾';
+}
+
+// ═══════════════════════════════════════════
+// ADMIN PANEL
+// ═══════════════════════════════════════════
+function showAdminSection(sec){
+  _admSection=sec;
+  document.querySelectorAll('.adm-nav-btn').forEach(b=>b.classList.remove('active'));
+  const nb=document.getElementById('adm-nav-'+sec);if(nb)nb.classList.add('active');
+  const fns={users:loadAdminUsers,lines:loadAdminLines,orders:loadAdminOrders,defects:loadAdminDefects,stages:loadAdminStages};
+  if(fns[sec])fns[sec]();
+}
+function openAdmModal(title,bodyHTML){
+  document.getElementById('adm-modal-title').textContent=title;
+  document.getElementById('adm-modal-body').innerHTML=bodyHTML;
+  document.getElementById('adm-modal-ov').classList.add('open');
+}
+function closeAdmModal(){document.getElementById('adm-modal-ov').classList.remove('open');_admEditId=null;}
+async function saveAdmModal(){
+  const fns={users:saveAdmUser,lines:saveAdmLine,orders:saveAdmOrder,defects:saveAdmDefect,stages:saveAdmStage};
+  if(fns[_admSection])await fns[_admSection]();
+}
+function escQ(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
+
+// ── USERS ──
+async function loadAdminUsers(){
+  const el=document.getElementById('adm-content');
+  el.innerHTML='<div style="color:var(--t2);padding:20px">Loading...</div>';
+  const recs=await sbGet('app_users?order=full_name.asc');
+  const rc={admin:'var(--pur)',manager:'var(--teal)',checker:'var(--blu)',finishing:'var(--org)'};
+  el.innerHTML=`<div class="adm-sec-hdr"><div class="adm-sec-title">👤 Users</div>
+    <button class="btn-primary" onclick="openAdmAddUser()">+ Add User</button></div>
+  <div class="tbl-wrap"><table class="adm-tbl"><thead><tr>
+    <th>Name</th><th>Username</th><th>Role</th><th>Line</th><th>Last Login</th><th>Active</th><th></th>
+  </tr></thead><tbody>${recs.map(u=>{
+    const col=rc[u.role]||'var(--t2)';
+    const ll=u.last_login?fmtDate(u.last_login.split('T')[0]):'Never';
+    return`<tr>
+      <td style="font-weight:600">${u.full_name||u.username}</td>
+      <td style="color:var(--t2);font-family:'JetBrains Mono',monospace;font-size:12px">${u.username}</td>
+      <td><span class="adm-badge" style="background:${col}22;color:${col}">${u.role||'—'}</span></td>
+      <td>${u.assigned_line||'—'}</td>
+      <td style="color:var(--t2);font-size:12px">${ll}</td>
+      <td><label class="adm-toggle"><input type="checkbox" ${u.is_active?'checked':''} onchange="toggleAdmUser(${u.id},this.checked)"><span class="adm-toggle-slider"></span></label></td>
+      <td><button class="btn-sm" onclick='openAdmEditUser(${JSON.stringify(JSON.stringify(u))})'>Edit</button></td>
+    </tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+function _lineOpts(sel=''){
+  return`<option value="">— None —</option>`+allLines.map(l=>`<option value="${l.lineName}" ${sel===l.lineName?'selected':''}>${l.lineName} · ${l.floor}</option>`).join('');
+}
+function openAdmAddUser(){
+  _admEditId=null;
+  openAdmModal('Add User',`
+    <div class="adm-field"><label>Full Name</label><input id="af-name" placeholder="Full Name"></div>
+    <div class="adm-field"><label>Username</label><input id="af-user" placeholder="username" autocomplete="off"></div>
+    <div class="adm-field"><label>Password</label><input id="af-pass" type="password" placeholder="Password" autocomplete="new-password"></div>
+    <div class="adm-field"><label>Role</label><select id="af-role">
+      <option value="checker">Checker</option><option value="manager">Manager</option>
+      <option value="finishing">Finishing</option><option value="admin">Admin</option>
+    </select></div>
+    <div class="adm-field"><label>Assigned Line</label><select id="af-line" onchange="admAutoFloor()">${_lineOpts()}</select></div>
+    <div class="adm-field"><label>Floor</label><input id="af-floor" placeholder="Floor"></div>
+  `);
+}
+function openAdmEditUser(jsonStr){
+  const u=JSON.parse(jsonStr);_admEditId=u.id;
+  openAdmModal('Edit User',`
+    <div class="adm-field"><label>Full Name</label><input id="af-name" value="${escQ(u.full_name||'')}"></div>
+    <div class="adm-field"><label>Username</label><input id="af-user" value="${escQ(u.username||'')}" autocomplete="off"></div>
+    <div class="adm-field"><label>Password <span style="font-weight:400;color:var(--t2)">(leave blank to keep)</span></label><input id="af-pass" type="password" placeholder="New password" autocomplete="new-password"></div>
+    <div class="adm-field"><label>Role</label><select id="af-role">
+      <option value="checker" ${u.role==='checker'?'selected':''}>Checker</option>
+      <option value="manager" ${u.role==='manager'?'selected':''}>Manager</option>
+      <option value="finishing" ${u.role==='finishing'?'selected':''}>Finishing</option>
+      <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+    </select></div>
+    <div class="adm-field"><label>Assigned Line</label><select id="af-line" onchange="admAutoFloor()">${_lineOpts(u.assigned_line||'')}</select></div>
+    <div class="adm-field"><label>Floor</label><input id="af-floor" value="${escQ(u.floor||'')}"></div>
+  `);
+}
+function admAutoFloor(){
+  const ln=allLines.find(l=>l.lineName===document.getElementById('af-line').value);
+  if(ln)document.getElementById('af-floor').value=ln.floor;
+}
+async function saveAdmUser(){
+  const name=document.getElementById('af-name').value.trim();
+  const user=document.getElementById('af-user').value.trim();
+  const pass=document.getElementById('af-pass').value.trim();
+  const role=document.getElementById('af-role').value;
+  const line=document.getElementById('af-line').value;
+  const floor=document.getElementById('af-floor').value.trim();
+  if(!name||!user){showToast('Name and username required','reject');return;}
+  const payload={full_name:name,username:user,role,assigned_line:line,floor,is_active:true};
+  if(pass)payload.password=pass;
+  try{
+    if(_admEditId)await sbPatch('app_users',_admEditId,payload);
+    else{if(!pass){showToast('Password required for new user','reject');return;}await sbPost('app_users',payload);}
+    closeAdmModal();showToast(_admEditId?'User updated':'User created','pass');loadAdminUsers();
+  }catch(e){showToast('Failed to save user','reject');console.error(e);}
+}
+async function toggleAdmUser(id,active){
+  try{await sbPatch('app_users',id,{is_active:active});showToast(active?'User activated':'User deactivated',active?'pass':'alter');}
+  catch(e){showToast('Failed','reject');}
+}
+
+// ── LINES ──
+async function loadAdminLines(){
+  const el=document.getElementById('adm-content');
+  el.innerHTML='<div style="color:var(--t2);padding:20px">Loading...</div>';
+  const recs=await sbGet('lines?order=line_name.asc');
+  el.innerHTML=`<div class="adm-sec-hdr"><div class="adm-sec-title">🏭 Lines</div>
+    <button class="btn-primary" onclick="openAdmAddLine()">+ Add Line</button></div>
+  <div class="tbl-wrap"><table class="adm-tbl"><thead><tr>
+    <th>Line Name</th><th>Floor</th><th>Contractor</th><th>Abbr</th><th></th>
+  </tr></thead><tbody>${recs.map(l=>`<tr>
+    <td style="font-weight:600">${l.line_name}</td>
+    <td>${l.floor||'—'}</td><td>${l.contractor||'—'}</td>
+    <td style="font-family:'JetBrains Mono',monospace">${l.abbr||'—'}</td>
+    <td><button class="btn-sm" onclick="openAdmEditLine(${l.id},'${escQ(l.line_name)}','${escQ(l.floor)}','${escQ(l.contractor)}','${escQ(l.abbr)}')">Edit</button></td>
+  </tr>`).join('')}</tbody></table></div>`;
+}
+function _lineForm(v={}){return`
+  <div class="adm-field"><label>Line Name</label><input id="lf-name" value="${v.name||''}" placeholder="e.g. Line 1"></div>
+  <div class="adm-field"><label>Floor</label><input id="lf-floor" value="${v.floor||''}" placeholder="e.g. Ground Floor"></div>
+  <div class="adm-field"><label>Contractor</label><input id="lf-cont" value="${v.cont||''}" placeholder="Contractor"></div>
+  <div class="adm-field"><label>Abbreviation</label><input id="lf-abbr" value="${v.abbr||''}" placeholder="e.g. L1"></div>`;}
+function openAdmAddLine(){_admEditId=null;openAdmModal('Add Line',_lineForm());}
+function openAdmEditLine(id,name,floor,cont,abbr){_admEditId=id;openAdmModal('Edit Line',_lineForm({name,floor,cont,abbr}));}
+async function saveAdmLine(){
+  const name=document.getElementById('lf-name').value.trim();
+  const floor=document.getElementById('lf-floor').value.trim();
+  const cont=document.getElementById('lf-cont').value.trim();
+  const abbr=document.getElementById('lf-abbr').value.trim();
+  if(!name){showToast('Line name required','reject');return;}
+  try{
+    if(_admEditId)await sbPatch('lines',_admEditId,{line_name:name,floor,contractor:cont,abbr});
+    else await sbPost('lines',{line_name:name,floor,contractor:cont,abbr});
+    await loadLines();closeAdmModal();showToast(_admEditId?'Line updated':'Line added','pass');loadAdminLines();
+  }catch(e){showToast('Failed','reject');console.error(e);}
+}
+
+// ── ORDERS ──
+async function loadAdminOrders(){
+  const el=document.getElementById('adm-content');
+  el.innerHTML='<div style="color:var(--t2);padding:20px">Loading...</div>';
+  const recs=await sbGet('orders?order=style_id.asc&limit=300');
+  el.innerHTML=`<div class="adm-sec-hdr"><div class="adm-sec-title">📦 Orders / Styles</div>
+    <button class="btn-primary" onclick="openAdmAddOrder()">+ Add Order</button></div>
+  <div class="tbl-wrap"><table class="adm-tbl"><thead><tr>
+    <th>Style ID</th><th>Style</th><th>Customer</th><th>Color</th><th>PO</th><th class="td-num">Cut Qty</th><th></th>
+  </tr></thead><tbody>${recs.map(o=>`<tr>
+    <td style="font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12px">${o.style_id||'—'}</td>
+    <td>${o.style||'—'}</td><td>${o.customer||'—'}</td>
+    <td>${o.color||'—'}</td><td>${o.po||'—'}</td>
+    <td class="td-num">${o.cut_qty||0}</td>
+    <td><button class="btn-sm" onclick="openAdmEditOrder(${o.id},'${escQ(o.style_id)}','${escQ(o.style)}','${escQ(o.customer)}','${escQ(o.color)}','${escQ(o.po)}',${o.cut_qty||0})">Edit</button></td>
+  </tr>`).join('')}</tbody></table></div>`;
+}
+function _orderForm(v={}){return`
+  <div class="adm-field"><label>Style ID</label><input id="of-sid" value="${v.sid||''}" placeholder="e.g. 3413721"></div>
+  <div class="adm-field"><label>Style Name</label><input id="of-sty" value="${v.sty||''}" placeholder="Style name"></div>
+  <div class="adm-field"><label>Customer</label><input id="of-cust" value="${v.cust||''}" placeholder="Customer"></div>
+  <div class="adm-field"><label>Color</label><input id="of-col" value="${v.col||''}" placeholder="Color"></div>
+  <div class="adm-field"><label>PO Number</label><input id="of-po" value="${v.po||''}" placeholder="PO"></div>
+  <div class="adm-field"><label>Cut Qty</label><input id="of-cut" type="number" value="${v.cut||0}"></div>`;}
+function openAdmAddOrder(){_admEditId=null;openAdmModal('Add Order',_orderForm());}
+function openAdmEditOrder(id,sid,sty,cust,col,po,cut){_admEditId=id;openAdmModal('Edit Order',_orderForm({sid,sty,cust,col,po,cut}));}
+async function saveAdmOrder(){
+  const sid=document.getElementById('of-sid').value.trim();
+  const sty=document.getElementById('of-sty').value.trim();
+  const cust=document.getElementById('of-cust').value.trim();
+  const col=document.getElementById('of-col').value.trim();
+  const po=document.getElementById('of-po').value.trim();
+  const cut=parseInt(document.getElementById('of-cut').value)||0;
+  if(!sid){showToast('Style ID required','reject');return;}
+  const payload={style_id:sid,style:sty,customer:cust,color:col,po,cut_qty:cut};
+  try{
+    if(_admEditId)await sbPatch('orders',_admEditId,payload);
+    else await sbPost('orders',payload);
+    await loadOrders();closeAdmModal();showToast(_admEditId?'Order updated':'Order added','pass');loadAdminOrders();
+  }catch(e){showToast('Failed','reject');console.error(e);}
+}
+
+// ── DEFECTS ──
+const _DEF_CATS=['Stitching','Measurement','Fabric','Finishing','Others'];
+async function loadAdminDefects(){
+  const el=document.getElementById('adm-content');
+  el.innerHTML='<div style="color:var(--t2);padding:20px">Loading...</div>';
+  const recs=await sbGet('defect_master?order=sort_order.asc');
+  el.innerHTML=`<div class="adm-sec-hdr"><div class="adm-sec-title">🔍 Defect Master</div>
+    <button class="btn-primary" onclick="openAdmAddDefect()">+ Add Defect</button></div>
+  <div class="tbl-wrap"><table class="adm-tbl"><thead><tr>
+    <th>#</th><th>Name EN</th><th>Name HI</th><th>Category</th><th>Active</th><th></th>
+  </tr></thead><tbody>${recs.map((d,i)=>`<tr>
+    <td style="color:var(--t2);font-size:12px">${d.sort_order||i+1}</td>
+    <td style="font-weight:600">${d.name_en||'—'}</td>
+    <td style="color:var(--t2)">${d.name_hi||'—'}</td>
+    <td><span class="adm-badge" style="background:var(--s3);color:var(--t2)">${d.category||'Others'}</span></td>
+    <td><label class="adm-toggle"><input type="checkbox" ${d.is_active?'checked':''} onchange="toggleAdmDefect(${d.id},this.checked)"><span class="adm-toggle-slider"></span></label></td>
+    <td><button class="btn-sm" onclick="openAdmEditDefect(${d.id},'${escQ(d.name_en)}','${escQ(d.name_hi)}','${escQ(d.category)}',${d.sort_order||99})">Edit</button></td>
+  </tr>`).join('')}</tbody></table></div>`;
+}
+function _defForm(v={}){return`
+  <div class="adm-field"><label>Name (English)</label><input id="df-en" value="${v.en||''}" placeholder="Defect name"></div>
+  <div class="adm-field"><label>Name (Hindi)</label><input id="df-hi" value="${v.hi||''}" placeholder="दोष का नाम"></div>
+  <div class="adm-field"><label>Category</label><select id="df-cat">${_DEF_CATS.map(c=>`<option ${c===(v.cat||'Others')?'selected':''}>${c}</option>`).join('')}</select></div>
+  <div class="adm-field"><label>Sort Order</label><input id="df-sort" type="number" value="${v.sort||99}"></div>`;}
+function openAdmAddDefect(){_admEditId=null;openAdmModal('Add Defect',_defForm());}
+function openAdmEditDefect(id,en,hi,cat,sort){_admEditId=id;openAdmModal('Edit Defect',_defForm({en,hi,cat,sort}));}
+async function saveAdmDefect(){
+  const en=document.getElementById('df-en').value.trim();
+  const hi=document.getElementById('df-hi').value.trim();
+  const cat=document.getElementById('df-cat').value;
+  const sort=parseInt(document.getElementById('df-sort').value)||99;
+  if(!en){showToast('English name required','reject');return;}
+  try{
+    if(_admEditId)await sbPatch('defect_master',_admEditId,{name_en:en,name_hi:hi,category:cat,sort_order:sort});
+    else await sbPost('defect_master',{name_en:en,name_hi:hi,category:cat,is_active:true,sort_order:sort});
+    await loadDefects();closeAdmModal();showToast(_admEditId?'Defect updated':'Defect added','pass');loadAdminDefects();
+  }catch(e){showToast('Failed','reject');console.error(e);}
+}
+async function toggleAdmDefect(id,active){
+  try{await sbPatch('defect_master',id,{is_active:active});await loadDefects();showToast(active?'Defect enabled':'Defect disabled',active?'pass':'alter');}
+  catch(e){showToast('Failed','reject');}
+}
+
+// ── FINISHING STAGES ──
+async function loadAdminStages(){
+  const el=document.getElementById('adm-content');
+  el.innerHTML='<div style="color:var(--t2);padding:20px">Loading...</div>';
+  const recs=await sbGet('finishing_stages?order=order_no.asc');
+  el.innerHTML=`<div class="adm-sec-hdr"><div class="adm-sec-title">✂️ Finishing Stages</div>
+    <button class="btn-primary" onclick="openAdmAddStage()">+ Add Stage</button></div>
+  <div class="tbl-wrap"><table class="adm-tbl"><thead><tr>
+    <th>Order</th><th>Stage Name</th><th>Active</th><th></th>
+  </tr></thead><tbody>${recs.map(s=>`<tr>
+    <td style="color:var(--t2);font-family:'JetBrains Mono',monospace">${s.order_no||'—'}</td>
+    <td style="font-weight:600">${s.name||s.stage_name||'—'}</td>
+    <td><label class="adm-toggle"><input type="checkbox" ${s.is_active?'checked':''} onchange="toggleAdmStage(${s.id},this.checked)"><span class="adm-toggle-slider"></span></label></td>
+    <td><button class="btn-sm" onclick="openAdmEditStage(${s.id},'${escQ(s.name||s.stage_name)}',${s.order_no||99})">Edit</button></td>
+  </tr>`).join('')}</tbody></table></div>`;
+}
+function _stageForm(v={}){return`
+  <div class="adm-field"><label>Stage Name</label><input id="sf-name" value="${v.name||''}" placeholder="e.g. Final Check"></div>
+  <div class="adm-field"><label>Order No</label><input id="sf-ord" type="number" value="${v.ord||99}"></div>`;}
+function openAdmAddStage(){_admEditId=null;openAdmModal('Add Stage',_stageForm());}
+function openAdmEditStage(id,name,ord){_admEditId=id;openAdmModal('Edit Stage',_stageForm({name,ord}));}
+async function saveAdmStage(){
+  const name=document.getElementById('sf-name').value.trim();
+  const ord=parseInt(document.getElementById('sf-ord').value)||99;
+  if(!name){showToast('Stage name required','reject');return;}
+  try{
+    if(_admEditId)await sbPatch('finishing_stages',_admEditId,{name,order_no:ord});
+    else await sbPost('finishing_stages',{name,order_no:ord,is_active:true});
+    closeAdmModal();showToast(_admEditId?'Stage updated':'Stage added','pass');loadAdminStages();
+  }catch(e){showToast('Failed','reject');console.error(e);}
+}
+async function toggleAdmStage(id,active){
+  try{await sbPatch('finishing_stages',id,{is_active:active});showToast(active?'Stage enabled':'Stage disabled',active?'pass':'alter');}
+  catch(e){showToast('Failed','reject');}
 }
 
 function showTab(name){
