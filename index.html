@@ -610,6 +610,7 @@ tr:hover td{background:var(--s2)}
   <div class="mgr-hdr">
     <div class="brand">SEWLYTICS</div>
     <div style="display:flex;gap:8px;align-items:center">
+      <span style="font-size:13px;font-weight:600;color:var(--t2)" id="mgr-uname"></span>
       <div class="role-badge">MANAGER</div>
       <button class="btn-back-admin" id="btn-back-admin-mgr" onclick="goBackToAdmin()">⚙ Admin</button>
       <button class="btn-sm" onclick="doLogout()">Exit</button>
@@ -1153,19 +1154,20 @@ async function initApp(){
       await Promise.all([loadOrders(),loadLines(),loadDefects()]);
       hideLoad();hideLogin();
       document.getElementById('mgr-app').style.display='flex';
-      if(isAdmin) document.getElementById('btn-back-admin-mgr').style.display='';
+      if(isAdmin) document.getElementById('btn-back-admin-mgr').style.display='inline-block';
+      document.getElementById('mgr-uname').textContent=currentUser.fullName||currentUser.username;
       initManagerFilters();loadReport();
     } else if(isFin){
       await Promise.all([loadOrders(),loadLines(),loadDefects(),loadFinishingStages()]);
       hideLoad();hideLogin();
       document.getElementById('finishing-app').style.display='flex';
-      if(isAdmin) document.getElementById('btn-back-admin-fin').style.display='';
+      if(isAdmin) document.getElementById('btn-back-admin-fin').style.display='inline-block';
       initFinishingScreen();
     } else {
       await Promise.all([loadOrders(),loadLines(),loadDefects(),loadAlterQueue()]);
       hideLoad();hideLogin();
       document.getElementById('app').style.display='flex';
-      if(isAdmin) document.getElementById('btn-back-admin-chk').style.display='';
+      if(isAdmin) document.getElementById('btn-back-admin-chk').style.display='inline-block';
       document.getElementById('cn').textContent=currentUser.fullName;
       document.getElementById('cli').textContent=currentUser.assignedLine||'All Lines';
       populateStyleDD();applyTrans();
