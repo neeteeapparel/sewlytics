@@ -238,9 +238,18 @@ body{font-family:'Rajdhani','Noto Sans Devanagari',sans-serif;background:var(--b
    MANAGER / DHU REPORT
 ═══════════════════════════════════ */
 #mgr-app{display:none;flex-direction:column;min-height:100vh}
-.mgr-hdr{background:#fff;border-bottom:1px solid var(--bdr);box-shadow:0 1px 4px rgba(0,0,0,0.06);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.mgr-hdr .brand{font-size:20px;font-weight:700;letter-spacing:1px;color:var(--teal);font-weight:800}
-.mgr-hdr .role-badge{background:var(--teal-d);border:1px solid var(--teal);border-radius:20px;color:var(--teal);font-size:12px;font-weight:600;padding:4px 12px;letter-spacing:1px}
+.mgr-hdr{background:#fff;border-bottom:1px solid var(--bdr);box-shadow:0 1px 4px rgba(0,0,0,0.06);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.mgr-hdr .brand{font-size:20px;font-weight:800;letter-spacing:1px;color:var(--teal)}
+/* Unified role badge — used across all screens */
+.role-badge{border-radius:20px;font-size:12px;font-weight:700;padding:4px 12px;letter-spacing:1px;border:1px solid}
+.role-badge.role-manager{background:var(--teal-d);border-color:var(--teal);color:var(--teal)}
+.role-badge.role-checker{background:var(--blu-d);border-color:var(--blu);color:var(--blu)}
+.role-badge.role-finishing{background:var(--org-d);border-color:var(--org);color:var(--org)}
+.role-badge.role-admin{background:var(--pur-d);border-color:var(--pur);color:var(--pur)}
+/* Unified user name in header */
+.hdr-uname{font-size:13px;font-weight:600;color:var(--t2)}
+/* Admin view-as strip */
+.adm-view-as-bar{background:var(--s2);border-bottom:1px solid var(--bdr);padding:7px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0}
 .mgr-main{flex:1;padding:16px;max-width:1000px;margin:0 auto;width:100%}
 @media(min-width:1280px){.mgr-main{max-width:1400px;padding:20px 28px}}
 @media(min-width:1600px){.mgr-main{max-width:1700px;padding:20px 40px}}
@@ -436,17 +445,18 @@ tr:hover td{background:var(--s2)}
     <div class="hdr-brand">SEWLYTICS</div>
     <div class="hdr-right">
       <div class="save-dot" id="sdot"></div>
-      <div class="lang-tog">
-        <button class="lang-btn active" onclick="setLang('en')" id="ben">EN</button>
-        <button class="lang-btn" onclick="setLang('hi')" id="bhi">हि</button>
-      </div>
+      <span class="hdr-uname" id="cn">—</span>
+      <span class="role-badge role-checker">CHECKER</span>
       <button class="btn-back-admin" id="btn-back-admin-chk" onclick="goBackToAdmin()">⚙ Admin</button>
       <button class="btn-sm" onclick="doLogout()">Exit</button>
     </div>
   </div>
   <div class="info-bar">
-    <span>👤 <span class="v" id="cn">—</span></span>
     <span>📍 <span class="v" id="cli">—</span></span>
+    <div class="lang-tog" style="margin-left:auto">
+      <button class="lang-btn active" onclick="setLang('en')" id="ben">EN</button>
+      <button class="lang-btn" onclick="setLang('hi')" id="bhi">हि</button>
+    </div>
     <div id="live-time">—</div>
   </div>
   <div class="main">
@@ -610,8 +620,8 @@ tr:hover td{background:var(--s2)}
   <div class="mgr-hdr">
     <div class="brand">SEWLYTICS</div>
     <div style="display:flex;gap:8px;align-items:center">
-      <span style="font-size:13px;font-weight:600;color:var(--t2)" id="mgr-uname"></span>
-      <div class="role-badge">MANAGER</div>
+      <span class="hdr-uname" id="mgr-uname">—</span>
+      <span class="role-badge role-manager">MANAGER</span>
       <button class="btn-back-admin" id="btn-back-admin-mgr" onclick="goBackToAdmin()">⚙ Admin</button>
       <button class="btn-sm" onclick="doLogout()">Exit</button>
     </div>
@@ -806,15 +816,19 @@ tr:hover td{background:var(--s2)}
 
 <!-- ADMIN APP -->
 <div id="admin-app">
-  <div class="adm-hdr">
-    <div class="adm-brand">⚙ ADMIN</div>
-    <div class="view-as-wrap">
-      <span class="view-as-lbl">View As:</span>
-      <button class="view-as-pill" onclick="viewAs('manager')">📊 Manager</button>
-      <button class="view-as-pill" onclick="viewAs('checker')">🪡 Checker</button>
-      <button class="view-as-pill" onclick="viewAs('finishing')">✂️ Finishing</button>
+  <div class="hdr">
+    <div class="hdr-brand">SEWLYTICS</div>
+    <div class="hdr-right">
+      <span class="hdr-uname" id="adm-uname">—</span>
+      <span class="role-badge role-admin">ADMIN</span>
+      <button class="btn-sm" onclick="doLogout()">Exit</button>
     </div>
-    <button class="btn-sm" onclick="doLogout()" style="margin-left:8px">Exit</button>
+  </div>
+  <div class="adm-view-as-bar">
+    <span class="view-as-lbl">VIEW AS:</span>
+    <button class="view-as-pill" onclick="viewAs('manager')">📊 Manager</button>
+    <button class="view-as-pill" onclick="viewAs('checker')">🪡 Checker</button>
+    <button class="view-as-pill" onclick="viewAs('finishing')">✂️ Finishing</button>
   </div>
   <div class="adm-body">
     <div class="adm-sidebar">
@@ -861,17 +875,18 @@ tr:hover td{background:var(--s2)}
 <div id="finishing-app">
   <!-- Header -->
   <div class="hdr">
-    <div class="hdr-brand">Sewlytics</div>
+    <div class="hdr-brand">SEWLYTICS</div>
     <div class="hdr-right">
       <div class="save-dot" id="fin-sdot"></div>
+      <span class="hdr-uname" id="fin-uname">—</span>
+      <span class="role-badge role-finishing">FINISHING</span>
       <button class="btn-back-admin" id="btn-back-admin-fin" onclick="goBackToAdmin()">⚙ Admin</button>
-      <button class="btn-sm" onclick="doLogout()">Logout</button>
+      <button class="btn-sm" onclick="doLogout()">Exit</button>
     </div>
   </div>
   <!-- Info bar -->
   <div class="info-bar">
-    <span style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2)">Finishing QC</span>
-    <span class="v" id="fin-uname">—</span>
+    <span style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t2)">✂️ Finishing QC</span>
     <span id="fin-stage-info" style="color:var(--teal);font-weight:600"></span>
   </div>
   <!-- Main -->
@@ -1145,31 +1160,34 @@ async function initApp(){
   const isFin=effectiveRole.includes('finishing');
   showLoad('Loading data...');
   try{
+    const uname=currentUser.fullName||currentUser.username;
     if(isAdmin&&!viewAsRole){
       await Promise.all([loadOrders(),loadLines(),loadDefects()]);
       hideLoad();hideLogin();
       document.getElementById('admin-app').style.display='flex';
+      document.getElementById('adm-uname').textContent=uname;
       showAdminSection('users');
     } else if(isMgr){
       await Promise.all([loadOrders(),loadLines(),loadDefects()]);
       hideLoad();hideLogin();
       document.getElementById('mgr-app').style.display='flex';
+      document.getElementById('mgr-uname').textContent=uname;
       if(isAdmin) document.getElementById('btn-back-admin-mgr').style.display='inline-block';
-      document.getElementById('mgr-uname').textContent=currentUser.fullName||currentUser.username;
       initManagerFilters();loadReport();
     } else if(isFin){
       await Promise.all([loadOrders(),loadLines(),loadDefects(),loadFinishingStages()]);
       hideLoad();hideLogin();
       document.getElementById('finishing-app').style.display='flex';
+      document.getElementById('fin-uname').textContent=uname;
       if(isAdmin) document.getElementById('btn-back-admin-fin').style.display='inline-block';
       initFinishingScreen();
     } else {
       await Promise.all([loadOrders(),loadLines(),loadDefects(),loadAlterQueue()]);
       hideLoad();hideLogin();
       document.getElementById('app').style.display='flex';
-      if(isAdmin) document.getElementById('btn-back-admin-chk').style.display='inline-block';
-      document.getElementById('cn').textContent=currentUser.fullName;
+      document.getElementById('cn').textContent=uname;
       document.getElementById('cli').textContent=currentUser.assignedLine||'All Lines';
+      if(isAdmin) document.getElementById('btn-back-admin-chk').style.display='inline-block';
       populateStyleDD();applyTrans();
     }
   }catch(e){
